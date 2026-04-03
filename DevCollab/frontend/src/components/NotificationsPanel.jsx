@@ -15,7 +15,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await axios.get('http://localhost:8666/api/notifications', { withCredentials: true });
+      const res = await axios.get('http://localhost:9090/api/notifications', { withCredentials: true });
       setNotifications(res.data);
     } catch (err) {
       console.error(err);
@@ -24,7 +24,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
 
   const markAsRead = async (id) => {
     try {
-      await axios.put(`http://localhost:8666/api/notifications/${id}/read`, {}, { withCredentials: true });
+      await axios.put(`http://localhost:9090/api/notifications/${id}/read`, {}, { withCredentials: true });
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     } catch (err) {
       console.error(err);
@@ -33,7 +33,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
 
   const markAllAsRead = async () => {
     try {
-      await axios.put('http://localhost:8666/api/notifications/readAll', {}, { withCredentials: true });
+      await axios.put('http://localhost:9090/api/notifications/readAll', {}, { withCredentials: true });
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     } catch (err) {
       console.error(err);

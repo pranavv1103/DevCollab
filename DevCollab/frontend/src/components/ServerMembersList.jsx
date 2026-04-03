@@ -32,7 +32,7 @@ const ServerMembersList = ({ serverId }) => {
 
   const fetchMembers = async () => {
     try {
-      const res = await axios.get(`http://localhost:8666/api/servers/${serverId}/members`);
+      const res = await axios.get(`http://localhost:9090/api/servers/${serverId}/members`);
       setMembers(res.data);
     } catch (error) {
       console.error("Failed to fetch server members", error);
@@ -96,7 +96,7 @@ const MemberItem = ({ member, isOnline }) => {
           overflow: 'hidden', color: 'white', fontWeight: 'bold', fontSize: '14px'
         }}>
           {member.user?.profilePictureUrl ? (
-             <img src={`http://localhost:8666${member.user.profilePictureUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+             <img src={`http://localhost:9090${member.user.profilePictureUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             member.user?.username?.charAt(0).toUpperCase()
           )}

@@ -82,7 +82,7 @@ const MessageList = ({ channelId, channelName }) => {
 
   const fetchMessages = async () => {
     try {
-      const res = await axios.get(`http://localhost:8666/api/channels/${channelId}/messages?page=0&size=50`);
+      const res = await axios.get(`http://localhost:9090/api/channels/${channelId}/messages?page=0&size=50`);
       // API returns newest first due to OrderByTimestampDesc, we need to reverse for chat view
       setMessages(res.data.content.reverse());
     } catch (error) {
@@ -131,7 +131,7 @@ const MessageList = ({ channelId, channelName }) => {
 
   const handleAiAction = async (action, payload) => {
     try {
-      const res = await axios.post(`http://localhost:8666/api/ai/${action}`, payload);
+      const res = await axios.post(`http://localhost:9090/api/ai/${action}`, payload);
       let title = "AI Assistant";
       if (action === 'explain') title = "Code Explanation";
       if (action === 'summarize') title = "Chat Summary";

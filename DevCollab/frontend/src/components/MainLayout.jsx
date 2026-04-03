@@ -27,14 +27,14 @@ const MainLayout = () => {
   
   const checkNotifications = async () => {
     try {
-      const res = await axios.get('http://localhost:8666/api/notifications', { withCredentials: true });
+      const res = await axios.get('http://localhost:9090/api/notifications', { withCredentials: true });
       if (res.data.some(n => !n.read)) setHasUnreadNotifications(true);
     } catch(err) { console.error(err); }
   };
 
   const fetchServers = async () => {
     try {
-      const res = await axios.get('http://localhost:8666/api/servers');
+      const res = await axios.get('http://localhost:9090/api/servers');
       setServers(res.data);
     } catch (error) {
       console.error("Failed to fetch servers", error);
@@ -50,7 +50,7 @@ const MainLayout = () => {
     e.preventDefault();
     if (!newServerName.trim()) return;
     try {
-      const res = await axios.post('http://localhost:8666/api/servers', { name: newServerName, description: "A DevCollab Server" });
+      const res = await axios.post('http://localhost:9090/api/servers', { name: newServerName, description: "A DevCollab Server" });
       await fetchServers();
       setIsModalOpen(false);
       navigate(`/servers/${res.data.id}`);
@@ -68,7 +68,7 @@ const MainLayout = () => {
     e.preventDefault();
     if (!inviteCode.trim()) return;
     try {
-      const res = await axios.post(`http://localhost:8666/api/servers/${inviteCode.trim()}/join`);
+      const res = await axios.post(`http://localhost:9090/api/servers/${inviteCode.trim()}/join`);
       await fetchServers();
       setIsJoinModalOpen(false);
       navigate(`/servers/${res.data.id}`);

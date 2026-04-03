@@ -24,7 +24,7 @@ const ServerView = () => {
 
   const fetchServerDetails = async () => {
     try {
-      const res = await axios.get(`http://localhost:8666/api/servers/${serverId}`);
+      const res = await axios.get(`http://localhost:9090/api/servers/${serverId}`);
       setActiveServer(res.data);
     } catch (error) {
       console.error("Failed to fetch server details", error);
@@ -33,7 +33,7 @@ const ServerView = () => {
 
   const fetchChannels = async () => {
     try {
-      const res = await axios.get(`http://localhost:8666/api/servers/${serverId}/channels`);
+      const res = await axios.get(`http://localhost:9090/api/servers/${serverId}/channels`);
       setChannels(res.data);
       // Auto-select first channel if none selected
       if (!channelId && res.data.length > 0) {
@@ -53,7 +53,7 @@ const ServerView = () => {
     e.preventDefault();
     if (!newChannelName.trim()) return;
     try {
-      const res = await axios.post(`http://localhost:8666/api/servers/${serverId}/channels`, { name: newChannelName.toLowerCase().replace(/\s+/g, '-'), type: "text" });
+      const res = await axios.post(`http://localhost:9090/api/servers/${serverId}/channels`, { name: newChannelName.toLowerCase().replace(/\s+/g, '-'), type: "text" });
       await fetchChannels();
       setIsModalOpen(false);
       navigate(`/servers/${serverId}/channels/${res.data.id}`);

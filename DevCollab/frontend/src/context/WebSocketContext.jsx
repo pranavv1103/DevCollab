@@ -12,7 +12,7 @@ export const WebSocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (token) {
-      const socket = new SockJS('http://localhost:8666/ws');
+      const socket = new SockJS('http://localhost:9090/ws');
       const client = new Client({
         webSocketFactory: () => socket,
         connectHeaders: {

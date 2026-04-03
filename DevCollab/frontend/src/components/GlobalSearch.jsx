@@ -12,7 +12,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:8666/api/search?query=${encodeURIComponent(query)}`);
+      const res = await axios.get(`http://localhost:9090/api/search?query=${encodeURIComponent(query)}`);
       setResults(res.data);
     } catch (err) {
       console.error(err);

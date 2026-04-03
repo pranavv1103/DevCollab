@@ -19,7 +19,7 @@ const UserProfile = () => {
 
   const fetchProfile = async () => {
     try {
-      const res = await axios.get(`http://localhost:8666/api/users/${user.id}`);
+      const res = await axios.get(`http://localhost:9090/api/users/${user.id}`);
       setProfile(res.data);
       setFormData(res.data);
     } catch (error) {
@@ -29,7 +29,7 @@ const UserProfile = () => {
 
   const handleSave = async () => {
     try {
-      await axios.put(`http://localhost:8666/api/users/${user.id}/profile`, formData);
+      await axios.put(`http://localhost:9090/api/users/${user.id}/profile`, formData);
       setProfile(formData);
       setEditMode(false);
     } catch (error) {
@@ -46,10 +46,10 @@ const UserProfile = () => {
     formDataUpload.append('file', file);
 
     try {
-        const res = await axios.post(`http://localhost:8666/api/users/${user.id}/avatar`, formDataUpload, {
+        const res = await axios.post(`http://localhost:9090/api/users/${user.id}/avatar`, formDataUpload, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
-        const newUrl = `http://localhost:8666${res.data.message}`; // get avatarUrl string from message response
+        const newUrl = `http://localhost:9090${res.data.message}`; // get avatarUrl string from message response
         setFormData(prev => ({...prev, profilePictureUrl: newUrl}));
         setProfile(prev => ({...prev, profilePictureUrl: newUrl}));
     } catch (error) {
@@ -69,7 +69,7 @@ const UserProfile = () => {
           <div style={{ 
             width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', 
             display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '18px',
-            backgroundImage: profile.profilePictureUrl ? `url(${profile.profilePictureUrl.startsWith('http') ? profile.profilePictureUrl : 'http://localhost:8666' + profile.profilePictureUrl})` : 'none',
+            backgroundImage: profile.profilePictureUrl ? `url(${profile.profilePictureUrl.startsWith('http') ? profile.profilePictureUrl : 'http://localhost:9090' + profile.profilePictureUrl})` : 'none',
             backgroundSize: 'cover', backgroundPosition: 'center', color: profile.profilePictureUrl ? 'transparent' : 'white'
           }}>
             {!profile.profilePictureUrl && profile.username?.charAt(0).toUpperCase()}

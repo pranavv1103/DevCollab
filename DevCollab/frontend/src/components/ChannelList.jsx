@@ -19,7 +19,7 @@ const ChannelList = ({ channels, activeChannelId, serverId, server, onCreateChan
   const handleDeleteServer = async () => {
     if (window.confirm('Are you sure you want to delete this server? This action cannot be undone.')) {
       try {
-        await axios.delete(`http://localhost:8666/api/servers/${serverId}`);
+        await axios.delete(`http://localhost:9090/api/servers/${serverId}`);
         navigate('/');
         window.location.reload();
       } catch (error) {
