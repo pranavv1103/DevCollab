@@ -1,0 +1,175 @@
+:root {
+  --color-bg-base: #0f1115;
+  --color-bg-elevation-1: #161a22;
+  --color-bg-elevation-2: #1e2430;
+  --color-bg-elevation-3: #262c3a;
+  
+  --color-primary: #5865f2;
+  --color-primary-hover: #4752c4;
+  --color-primary-active: #3c45a5;
+  
+  --color-danger: #ed4245;
+  --color-success: #3ba55c;
+  --color-warning: #fee75c;
+  
+  --color-text-base: #f1f2f5;
+  --color-text-muted: #9ba0ab;
+  --color-text-dark: #4f5660;
+
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --border-radius-full: 9999px;
+
+  --transition-fast: 0.15s ease-in-out;
+  --transition-normal: 0.25s ease;
+  
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+  --shadow-glow: 0 0 12px rgba(88, 101, 242, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family-base);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden; /* App fills the screen */
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+  text-shadow: 0 0 8px rgba(88,101,242,0.6);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary), #6e7dfa);
+  color: white;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+  background: linear-gradient(135deg, #6e7dfa, var(--color-primary-hover));
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+input {
+  font-family: inherit;
+  background-color: var(--color-bg-elevation-2);
+  color: var(--color-text-base);
+  border: 1px solid var(--color-bg-elevation-3);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+input:focus {
+  border-color: var(--color-primary);
+}
+
+/* Scrollbar styling for webkit */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-bg-elevation-3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-dark);
+}
+
+/* Glassmorphism effects */
+.glass-panel {
+  background: rgba(30, 36, 48, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-md);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(88, 101, 242, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) forwards cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hover-bg-3 {
+  transition: background-color var(--transition-fast);
+}
+.hover-bg-3:hover {
+  background-color: var(--color-bg-elevation-3);
+}
+
+.message-bubble {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.message-container:hover .message-bubble {
+  box-shadow: var(--shadow-md);
+}
+
+.btn-icon {
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+.btn-icon:hover {
+  background-color: rgba(255,255,255,0.1);
+  transform: scale(1.05);
+}
