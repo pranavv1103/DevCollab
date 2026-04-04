@@ -29,8 +29,9 @@ public class WebSocketEventListener {
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
-        if (headerAccessor.getSessionAttributes() != null) {
-            String username = (String) headerAccessor.getSessionAttributes().get("username");
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes != null) {
+            String username = (String) sessionAttributes.get("username");
             
             if (username != null) {
                 userRepository.findByUsername(username).ifPresent(user -> {
@@ -52,8 +53,9 @@ public class WebSocketEventListener {
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
-        if (headerAccessor.getSessionAttributes() != null) {
-            String username = (String) headerAccessor.getSessionAttributes().get("username");
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes != null) {
+            String username = (String) sessionAttributes.get("username");
 
             if (username != null) {
                 userRepository.findByUsername(username).ifPresent(user -> {
