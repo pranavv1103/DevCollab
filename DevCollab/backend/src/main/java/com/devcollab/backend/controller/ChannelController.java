@@ -78,6 +78,9 @@ public class ChannelController {
         Optional<Channel> channelOpt = channelRepository.findById(channelId);
         if (channelOpt.isPresent()) {
             Channel channel = channelOpt.get();
+            if (!channel.getServer().getId().equals(serverId)) {
+                return ResponseEntity.status(403).body(new MessageResponse("Error: Channel does not belong to the specified server"));
+            }
             if (channelRequest.getName() != null) channel.setName(channelRequest.getName());
             if (channelRequest.getDescription() != null) channel.setDescription(channelRequest.getDescription());
             if (channelRequest.getType() != null) channel.setType(channelRequest.getType());
@@ -100,7 +103,11 @@ public class ChannelController {
 
         Optional<Channel> channelOpt = channelRepository.findById(channelId);
         if (channelOpt.isPresent()) {
-            channelRepository.delete(channelOpt.get());
+            Channel channel = channelOpt.get();
+            if (!channel.getServer().getId().equals(serverId)) {
+                return ResponseEntity.status(403).body(new MessageResponse("Error: Channel does not belong to the specified server"));
+            }
+            channelRepository.delete(channel);
             return ResponseEntity.ok(new MessageResponse("Channel deleted successfully"));
         }
         return ResponseEntity.notFound().build();

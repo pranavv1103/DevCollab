@@ -47,7 +47,7 @@ public class NotificationController {
     @PutMapping("/readAll")
     public ResponseEntity<?> markAllAsRead() {
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        List<Notification> unread = notificationRepository.findByUserIdAndIsReadFalse(userDetails.getId());
+        List<Notification> unread = notificationRepository.findByUserIdAndReadFalse(userDetails.getId());
         for (Notification n : unread) {
             n.setRead(true);
         }

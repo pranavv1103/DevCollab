@@ -30,7 +30,7 @@ public class Notification {
     private Long relatedEntityId;
 
     @Builder.Default
-    private boolean isRead = false;
+    private boolean read = false;
 
     private LocalDateTime createdAt;
 
