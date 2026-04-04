@@ -220,11 +220,9 @@ public class ChatController {
         Object msgIdObj = payload.get("messageId");
         if (msgIdObj == null) return;
         Long messageId = Long.valueOf(msgIdObj.toString());
-        String emoji = (String) payload.get("emoji");
         
         Optional<Message> msgOpt = messageRepository.findById(messageId);
         if (msgOpt.isPresent()) {
-            Message msg = msgOpt.get();
             User user = userRepository.findByUsername(username).orElse(null);
             if (user != null) {
                 // If it exists, toggle it off. Otherwise add it.
