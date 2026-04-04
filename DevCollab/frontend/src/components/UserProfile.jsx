@@ -65,18 +65,20 @@ const UserProfile = () => {
   return (
     <div style={{ padding: '24px', backgroundColor: 'var(--color-bg-elevation-1)', borderBottom: '1px solid var(--color-bg-elevation-3)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, overflow: 'hidden' }}>
           <div style={{ 
-            width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', 
-            display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '18px',
+            minWidth: '40px', width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', 
+            display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '18px', flexShrink: 0,
             backgroundImage: profile.profilePictureUrl ? `url(${profile.profilePictureUrl.startsWith('http') ? profile.profilePictureUrl : 'http://localhost:9090' + profile.profilePictureUrl})` : 'none',
             backgroundSize: 'cover', backgroundPosition: 'center', color: profile.profilePictureUrl ? 'transparent' : 'white'
           }}>
             {!profile.profilePictureUrl && profile.username?.charAt(0).toUpperCase()}
           </div>
-          {profile.username}'s Profile
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {profile.username}'s Profile
+          </span>
         </h2>
-        <button className="btn-primary" onClick={() => editMode ? handleSave() : setEditMode(true)}>
+        <button className="btn-primary" style={{ flexShrink: 0 }} onClick={() => editMode ? handleSave() : setEditMode(true)}>
           {editMode ? 'Save Profile' : 'Edit Profile'}
         </button>
       </div>

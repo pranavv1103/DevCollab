@@ -55,7 +55,9 @@ const Sidebar = ({ servers, onCreateServer, onJoinServer, onLogout, onOpenSearch
           }}
           onMouseOver={e => { e.currentTarget.style.borderRadius = '16px'; e.currentTarget.style.backgroundColor = 'var(--color-success)'; e.currentTarget.style.color = 'white'; }}
           onMouseOut={e => { e.currentTarget.style.borderRadius = '50%'; e.currentTarget.style.backgroundColor = 'var(--color-bg-elevation-3)'; e.currentTarget.style.color = 'var(--color-success)'; }}
+          title="Create Server"
         >
+          <Plus size={24} />
         </button>
 
         {/* Join Server Button */}
