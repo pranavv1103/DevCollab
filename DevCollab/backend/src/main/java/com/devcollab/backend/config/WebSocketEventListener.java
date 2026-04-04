@@ -1,6 +1,5 @@
 package com.devcollab.backend.config;
 
-import com.devcollab.backend.entity.User;
 import com.devcollab.backend.entity.UserStatus;
 import com.devcollab.backend.repository.UserRepository;
 import org.slf4j.Logger;

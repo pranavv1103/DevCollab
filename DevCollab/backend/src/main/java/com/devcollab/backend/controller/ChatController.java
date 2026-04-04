@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
 public class ChatController {
 
     private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
+    private static final Pattern MENTION_PATTERN = Pattern.compile("@(\\w+)");
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
@@ -56,7 +57,12 @@ public class ChatController {
         // For WebSockets, passing JWT as query param or interceptor is common.
         // Assuming user string is stored in session attributes from a ChannelInterceptor during STOMP connect.
         // For simplicity in this demo, you might just accept it fully mapped if authentication is already intercepted.
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes == null) {
+            logger.error("Session attributes missing for WebSocket message");
+            return;
+        }
+        String username = (String) sessionAttributes.get("username");
         
         if (username == null) {
             logger.error("Unauthorized WebSocket message attempt");
@@ -105,21 +111,22 @@ public class ChatController {
             }
 
             // Parse mentions and create notifications
-            Pattern pattern = Pattern.compile("@(\\w+)");
-            Matcher matcher = pattern.matcher(savedMessage.getContent());
-            while (matcher.find()) {
-                String mentionedUsername = matcher.group(1);
-                User mentionedUser = userRepository.findByUsername(mentionedUsername).orElse(null);
-                if (mentionedUser != null && !mentionedUser.getId().equals(sender.getId())) {
-                    Notification mentionNotif = Notification.builder()
-                        .user(mentionedUser)
-                        .type("MENTION")
-                        .content("You were mentioned in #" + channel.getName() + " by " + sender.getUsername())
-                        .relatedEntityId(channel.getId())
-                        .createdAt(LocalDateTime.now())
-                        .build();
-                    notificationRepository.save(mentionNotif);
-                    messagingTemplate.convertAndSend("/topic/user/" + mentionedUser.getId() + "/notifications", mentionNotif);
+            if (savedMessage.getContent() != null && !savedMessage.getContent().isEmpty()) {
+                Matcher matcher = MENTION_PATTERN.matcher(savedMessage.getContent());
+                while (matcher.find()) {
+                    String mentionedUsername = matcher.group(1);
+                    User mentionedUser = userRepository.findByUsername(mentionedUsername).orElse(null);
+                    if (mentionedUser != null && !mentionedUser.getId().equals(sender.getId())) {
+                        Notification mentionNotif = Notification.builder()
+                            .user(mentionedUser)
+                            .type("MENTION")
+                            .content("You were mentioned in #" + channel.getName() + " by " + sender.getUsername())
+                            .relatedEntityId(channel.getId())
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                        notificationRepository.save(mentionNotif);
+                        messagingTemplate.convertAndSend("/topic/user/" + mentionedUser.getId() + "/notifications", mentionNotif);
+                    }
                 }
             }
 
@@ -132,7 +139,12 @@ public class ChatController {
     public void editMessage(@DestinationVariable Long channelId,
                             @Payload Map<String, Object> payload,
                             SimpMessageHeaderAccessor headerAccessor) {
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes == null) {
+            logger.error("Session attributes missing for WebSocket message");
+            return;
+        }
+        String username = (String) sessionAttributes.get("username");
         if (username == null) return;
         
         Long messageId = Long.valueOf(payload.get("messageId").toString());
@@ -154,7 +166,12 @@ public class ChatController {
     public void deleteMessage(@DestinationVariable Long channelId,
                               @Payload Map<String, Object> payload,
                               SimpMessageHeaderAccessor headerAccessor) {
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes == null) {
+            logger.error("Session attributes missing for WebSocket message");
+            return;
+        }
+        String username = (String) sessionAttributes.get("username");
         if (username == null) return;
         
         Long messageId = Long.valueOf(payload.get("messageId").toString());
@@ -172,7 +189,12 @@ public class ChatController {
     public void typing(@DestinationVariable Long channelId,
                        @Payload TypingIndicator payload,
                        SimpMessageHeaderAccessor headerAccessor) {
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes == null) {
+            logger.error("Session attributes missing for WebSocket message");
+            return;
+        }
+        String username = (String) sessionAttributes.get("username");
         if (username == null) return;
         
         payload.setUsername(username);
@@ -183,7 +205,12 @@ public class ChatController {
     public void reactMessage(@DestinationVariable Long channelId,
                              @Payload Map<String, Object> payload,
                              SimpMessageHeaderAccessor headerAccessor) {
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes == null) {
+            logger.error("Session attributes missing for WebSocket message");
+            return;
+        }
+        String username = (String) sessionAttributes.get("username");
         if (username == null) return;
         
         Long messageId = Long.valueOf(payload.get("messageId").toString());
