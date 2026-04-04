@@ -147,7 +147,9 @@ public class ChatController {
         String username = (String) sessionAttributes.get("username");
         if (username == null) return;
         
-        Long messageId = Long.valueOf(payload.get("messageId").toString());
+        Object msgIdObj = payload.get("messageId");
+        if (msgIdObj == null) return;
+        Long messageId = Long.valueOf(msgIdObj.toString());
         String newContent = (String) payload.get("content");
         
         Optional<Message> msgOpt = messageRepository.findById(messageId);
@@ -174,7 +176,9 @@ public class ChatController {
         String username = (String) sessionAttributes.get("username");
         if (username == null) return;
         
-        Long messageId = Long.valueOf(payload.get("messageId").toString());
+        Object msgIdObj = payload.get("messageId");
+        if (msgIdObj == null) return;
+        Long messageId = Long.valueOf(msgIdObj.toString());
         Optional<Message> msgOpt = messageRepository.findById(messageId);
         if (msgOpt.isPresent()) {
             Message msg = msgOpt.get();
@@ -213,7 +217,9 @@ public class ChatController {
         String username = (String) sessionAttributes.get("username");
         if (username == null) return;
         
-        Long messageId = Long.valueOf(payload.get("messageId").toString());
+        Object msgIdObj = payload.get("messageId");
+        if (msgIdObj == null) return;
+        Long messageId = Long.valueOf(msgIdObj.toString());
         String emoji = (String) payload.get("emoji");
         
         Optional<Message> msgOpt = messageRepository.findById(messageId);
