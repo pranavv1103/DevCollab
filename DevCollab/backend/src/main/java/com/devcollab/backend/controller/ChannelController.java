@@ -36,7 +36,19 @@ public class ChannelController {
         if (!serverRepository.existsById(serverId)) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Server not found"));
         }
-        List<Channel> channels = channelRepository.findByServerId(serverId);
+        
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+        
+        if (!memberOpt.isPresent()) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: You are not a member of this server"));
+        }
+        
+        ServerMember member = memberOpt.get();
+        List<Channel> channels = channelRepository.findByServerId(serverId).stream()
+                .filter(channel -> !channel.isPrivate() || String.valueOf(member.getRole()).equals("OWNER") || String.valueOf(member.getRole()).equals("ADMIN"))
+                .collect(java.util.stream.Collectors.toList());
+                
         return ResponseEntity.ok(channels);
     }
 

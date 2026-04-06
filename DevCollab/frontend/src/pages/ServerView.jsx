@@ -14,6 +14,7 @@ const ServerView = () => {
   const [activeServer, setActiveServer] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
+  const [isPrivateChannel, setIsPrivateChannel] = useState(false);
   
   useEffect(() => {
     if (serverId) {
@@ -46,6 +47,7 @@ const ServerView = () => {
 
   const openCreateModal = () => {
     setNewChannelName('');
+    setIsPrivateChannel(false);
     setIsModalOpen(true);
   };
 
@@ -53,7 +55,11 @@ const ServerView = () => {
     e.preventDefault();
     if (!newChannelName.trim()) return;
     try {
-      const res = await axios.post(`http://localhost:9090/api/servers/${serverId}/channels`, { name: newChannelName.toLowerCase().replace(/\s+/g, '-'), type: "text" });
+      const res = await axios.post(`http://localhost:9090/api/servers/${serverId}/channels`, { 
+        name: newChannelName.toLowerCase().replace(/\s+/g, '-'), 
+        type: "text",
+        isPrivate: isPrivateChannel
+      });
       await fetchChannels();
       setIsModalOpen(false);
       navigate(`/servers/${serverId}/channels/${res.data.id}`);
@@ -108,6 +114,18 @@ const ServerView = () => {
                  autoFocus
                />
             </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: '4px' }}>
+            <input 
+              type="checkbox" 
+              id="isPrivate" 
+              checked={isPrivateChannel} 
+              onChange={e => setIsPrivateChannel(e.target.checked)} 
+              style={{ marginRight: '8px', cursor: 'pointer' }}
+            />
+            <label htmlFor="isPrivate" style={{ fontSize: '13px', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontWeight: 'bold' }}>Private Channel</span> (Only Admins and Owners)
+            </label>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
             <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '8px 16px', background: 'transparent', color: 'var(--color-text-base)', border: 'none', cursor: 'pointer' }}>Cancel</button>

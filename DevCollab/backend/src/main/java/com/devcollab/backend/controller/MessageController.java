@@ -39,14 +39,31 @@ public class MessageController {
     @Autowired
     CodeSnippetRepository codeSnippetRepository;
 
+    @Autowired
+    com.devcollab.backend.repository.ServerMemberRepository serverMemberRepository;
+
     @GetMapping("/channels/{channelId}/messages")
     public ResponseEntity<?> getMessagesByChannel(
             @PathVariable Long channelId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         
-        if (!channelRepository.existsById(channelId)) {
+        Optional<Channel> channelOpt = channelRepository.findById(channelId);
+        if (!channelOpt.isPresent()) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Channel not found"));
+        }
+        
+        Channel channel = channelOpt.get();
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<com.devcollab.backend.entity.ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), userDetails.getId());
+        
+        if (!memberOpt.isPresent()) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Not a member of this server"));
+        }
+        
+        com.devcollab.backend.entity.ServerMember member = memberOpt.get();
+        if (channel.isPrivate() && !(String.valueOf(member.getRole()).equals("OWNER") || String.valueOf(member.getRole()).equals("ADMIN"))) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized to view private channel messages"));
         }
 
         Page<Message> messages = messageRepository.findByChannelIdOrderByTimestampDesc(channelId, PageRequest.of(page, size));
@@ -60,8 +77,20 @@ public class MessageController {
         if (!channelOpt.isPresent()) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Channel not found"));
         }
-
+        
+        Channel channel = channelOpt.get();
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<com.devcollab.backend.entity.ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), userDetails.getId());
+        
+        if (!memberOpt.isPresent()) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Not a member of this server"));
+        }
+        
+        com.devcollab.backend.entity.ServerMember member = memberOpt.get();
+        if (channel.isPrivate() && !(String.valueOf(member.getRole()).equals("OWNER") || String.valueOf(member.getRole()).equals("ADMIN"))) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized to send messages in private channel"));
+        }
+
         User sender = userRepository.findById(userDetails.getId()).orElse(null);
 
         if (sender == null) {

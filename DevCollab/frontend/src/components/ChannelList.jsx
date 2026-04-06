@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Hash, Plus, Settings, Copy, Trash2 } from 'lucide-react';
+import { Hash, Plus, Settings, Copy, Trash2, Lock } from 'lucide-react';
 import UserProfile from './UserProfile';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
@@ -99,7 +99,11 @@ const ChannelList = ({ channels, activeChannelId, serverId, server, onCreateChan
             onMouseOver={e => { if (channel.id !== activeChannelId) e.currentTarget.style.backgroundColor = 'var(--color-bg-elevation-3)'; }}
             onMouseOut={e => { if (channel.id !== activeChannelId) e.currentTarget.style.backgroundColor = 'transparent'; }}
           >
-            <Hash size={20} style={{ marginRight: '8px', color: 'var(--color-text-dark)' }} />
+            {channel.private || channel.isPrivate ? (
+              <Lock size={16} style={{ marginRight: '8px', color: 'var(--color-text-muted)' }} />
+            ) : (
+              <Hash size={20} style={{ marginRight: '8px', color: 'var(--color-text-dark)' }} />
+            )}
             {channel.name}
           </NavLink>
         ))}

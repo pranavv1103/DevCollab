@@ -49,6 +49,9 @@ public class ChatController {
     @Autowired
     private NotificationRepository notificationRepository;
 
+    @Autowired
+    private com.devcollab.backend.repository.ServerMemberRepository serverMemberRepository;
+
     @MessageMapping("/chat.sendMessage/{channelId}")
     public void sendMessage(@DestinationVariable Long channelId,
                             @Payload MessageRequest messageRequest,
@@ -73,6 +76,17 @@ public class ChatController {
         Channel channel = channelRepository.findById(channelId).orElse(null);
 
         if (sender != null && channel != null) {
+            java.util.Optional<com.devcollab.backend.entity.ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), sender.getId());
+            if (!memberOpt.isPresent()) {
+                logger.error("Forbidden STOMP access: Non-member attempting to send message");
+                return;
+            }
+            
+            com.devcollab.backend.entity.ServerMember member = memberOpt.get();
+            if (channel.isPrivate() && !(String.valueOf(member.getRole()).equals("OWNER") || String.valueOf(member.getRole()).equals("ADMIN"))) {
+                logger.error("Forbidden STOMP access: Unauthorized send to private channel");
+                return;
+            }
             Message parentMessage = null;
             if (messageRequest.getParentMessageId() != null) {
                 parentMessage = messageRepository.findById(messageRequest.getParentMessageId()).orElse(null);
