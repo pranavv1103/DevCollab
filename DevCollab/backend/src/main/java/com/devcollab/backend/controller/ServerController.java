@@ -43,6 +43,13 @@ public class ServerController {
 
     @GetMapping("/{serverId}")
     public ResponseEntity<?> getServerById(@PathVariable Long serverId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+        
+        if (!memberOpt.isPresent()) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: You are not a member of this server"));
+        }
+
         Optional<Server> serverOpt = serverRepository.findById(serverId);
         if (!serverOpt.isPresent()) {
             return ResponseEntity.notFound().build();
@@ -115,6 +122,13 @@ public class ServerController {
          if (!serverRepository.existsById(serverId)) {
              return ResponseEntity.badRequest().body(new MessageResponse("Error: Server not found"));
          }
+         
+         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+         Optional<ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+         if (!memberOpt.isPresent()) {
+             return ResponseEntity.status(403).body(new MessageResponse("Error: You are not a member of this server"));
+         }
+         
          return ResponseEntity.ok(serverMemberRepository.findByServerId(serverId));
     }
 
