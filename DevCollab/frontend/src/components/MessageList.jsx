@@ -18,7 +18,6 @@ const MessageList = ({ channelId, channelName }) => {
   const editsSubRef = useRef(null);
   const deletesSubRef = useRef(null);
   const reactionsSubRef = useRef(null);
-  const [aiModalContent, setAiModalContent] = useState({ isOpen: false, title: '', message: '' });
   
   const [typingUsers, setTypingUsers] = useState([]);
   const [replyTo, setReplyTo] = useState(null);
@@ -129,27 +128,6 @@ const MessageList = ({ channelId, channelName }) => {
     }
   };
 
-  const handleAiAction = async (action, payload) => {
-    try {
-      const res = await axios.post(`http://localhost:9090/api/ai/${action}`, payload);
-      let title = "AI Assistant";
-      if (action === 'explain') title = "Code Explanation";
-      if (action === 'summarize') title = "Chat Summary";
-      if (action === 'suggest') title = "Code Suggestions";
-      if (action === 'standup') title = "Daily Standup";
-      if (action === 'bug-triage') title = "Bug Triage";
-      if (action === 'meeting-notes') title = "Meeting Notes";
-      setAiModalContent({ isOpen: true, title, message: res.data.result });
-    } catch (error) {
-      console.error("AI action failed", error);
-    }
-  };
-
-  const summarizeChat = () => {
-    const textMessages = messages.slice(-20).map(m => `${m.user.username}: ${m.content}`);
-    handleAiAction('summarize', { chatMessages: textMessages });
-  };
-
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg-base)' }}>
       {/* Header */}
@@ -158,21 +136,6 @@ const MessageList = ({ channelId, channelName }) => {
         borderBottom: '1px solid var(--color-bg-elevation-2)', boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
       }}>
         <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0' }}># {channelName || `channel-${channelId}`}</h3>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => handleAiAction('standup', {})} className="btn-icon" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--color-success)' }} title="Daily Standup">
-            <Sparkles size={14} /> Standup
-          </button>
-          <button onClick={() => handleAiAction('meeting-notes', {})} className="btn-icon" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--color-primary)' }} title="Meeting Notes">
-            <Sparkles size={14} /> Notes
-          </button>
-          <button 
-            onClick={summarizeChat}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', fontSize: '14px', fontWeight: 'bold' }}
-            title="Summarize Chat"
-          >
-            <Sparkles size={16} /> Summarize
-          </button>
-        </div>
       </div>
 
       {/* Messages */}
@@ -218,21 +181,6 @@ const MessageList = ({ channelId, channelName }) => {
                         {msg.snippet.codeContent}
                       </code>
                     </pre>
-                    <div style={{ display: 'flex', backgroundColor: '#141414', borderTop: '1px solid #333', padding: '4px' }}>
-                      <button 
-                        onClick={() => handleAiAction('explain', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language })}
-                        style={{ flex: 1, color: 'var(--color-text-muted)', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', padding: '4px', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                      >
-                        <FileText size={14} /> Explain
-                      </button>
-                      <div style={{ width: '1px', backgroundColor: '#333' }} />
-                      <button 
-                         onClick={() => handleAiAction('suggest', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language })}
-                        style={{ flex: 1, color: 'var(--color-text-muted)', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', padding: '4px', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                      >
-                        <Code size={14} /> Suggest Improvements
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
@@ -264,15 +212,6 @@ const MessageList = ({ channelId, channelName }) => {
           onCancelReply={() => setReplyTo(null)} 
         />
       </div>
-
-      <Modal isOpen={aiModalContent.isOpen} onClose={() => setAiModalContent({ ...aiModalContent, isOpen: false })} title={aiModalContent.title}>
-        <div style={{ color: 'var(--color-text-base)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
-          {aiModalContent.message}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-          <button onClick={() => setAiModalContent({ ...aiModalContent, isOpen: false })} className="btn-primary">Got it</button>
-        </div>
-      </Modal>
     </div>
   );
 };
