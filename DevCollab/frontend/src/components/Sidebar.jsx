@@ -27,22 +27,26 @@ const Sidebar = ({ servers, onCreateServer, onJoinServer, onLogout, onOpenSearch
       {/* Server List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }} className="no-scrollbar">
         {servers.map(server => (
-          <NavLink
-            key={server.id}
-            to={`/servers/${server.id}`}
-            style={({ isActive }) => ({
-              width: '48px', height: '48px',
-              borderRadius: isActive ? '16px' : '50%',
-              backgroundColor: isActive ? 'var(--color-primary)' : 'var(--color-bg-elevation-3)',
-              color: 'white',
-              display: 'flex', justifyContent: 'center', alignItems: 'center',
-              fontWeight: 'bold', fontSize: '16px',
-              transition: 'all 0.2s',
-              cursor: 'pointer'
-            })}
-          >
-            {server.name.charAt(0).toUpperCase()}
-          </NavLink>
+          <div key={server.id} style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }} title={server.name}>
+            <NavLink
+              to={`/servers/${server.id}`}
+              style={({ isActive }) => ({
+                width: '48px', height: '48px',
+                borderRadius: isActive ? '16px' : '50%',
+                backgroundColor: isActive ? 'var(--color-primary)' : 'var(--color-bg-elevation-3)',
+                color: 'white',
+                display: 'flex', justifyContent: 'center', alignItems: 'center',
+                fontWeight: 'bold', fontSize: '18px',
+                transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                cursor: 'pointer',
+                boxShadow: isActive ? '0 4px 12px rgba(88, 101, 242, 0.4)' : 'none'
+              })}
+              onMouseOver={e => { if(e.currentTarget.style.borderRadius === '50%') e.currentTarget.style.borderRadius = '16px'; e.currentTarget.style.backgroundColor = 'var(--color-primary)'; }}
+              onMouseOut={e => { if(!window.location.pathname.includes(`/servers/${server.id}`)) { e.currentTarget.style.borderRadius = '50%'; e.currentTarget.style.backgroundColor = 'var(--color-bg-elevation-3)'; } }}
+            >
+              {server.name.charAt(0).toUpperCase()}
+            </NavLink>
+          </div>
         ))}
         
         {/* Add Server Button */}

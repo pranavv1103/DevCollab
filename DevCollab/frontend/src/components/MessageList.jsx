@@ -18,6 +18,8 @@ const MessageList = ({ channelId, channelName }) => {
   const editsSubRef = useRef(null);
   const deletesSubRef = useRef(null);
   const reactionsSubRef = useRef(null);
+  const [aiModalContent, setAiModalContent] = useState({ isOpen: false, title: '', message: '' });
+  const [isAiLoading, setIsAiLoading] = useState(false);
   
   const [typingUsers, setTypingUsers] = useState([]);
   const [replyTo, setReplyTo] = useState(null);
@@ -128,18 +130,74 @@ const MessageList = ({ channelId, channelName }) => {
     }
   };
 
+  const handleAiAction = async (action, payload) => {
+    setIsAiLoading(true);
+    setAiModalContent({ isOpen: true, title: 'AI Assistant Generating...', message: 'Please wait...' });
+    try {
+      const res = await axios.post(`http://localhost:9090/api/ai/${action}`, payload);
+      let title = "✨ AI Assistant";
+      if (action === 'explain') title = "🧠 Code Explanation";
+      if (action === 'summarize') title = "📄 Chat Summary";
+      if (action === 'suggest') title = "💡 Code Suggestions";
+      if (action === 'standup') title = "📅 Daily Standup";
+      if (action === 'meeting-notes') title = "📝 Meeting Notes";
+      setAiModalContent({ isOpen: true, title, message: res.data.result });
+    } catch (error) {
+      console.error("AI action failed", error);
+      setAiModalContent({ isOpen: true, title: "⚠️ AI Error", message: "Failed to generate AI response. Is the backend running?" });
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const summarizeChat = () => {
+    const textMessages = messages.slice(-20).map(m => `${m.user.username}: ${m.content}`);
+    handleAiAction('summarize', { chatMessages: textMessages });
+  };
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg-base)' }}>
       {/* Header */}
       <div style={{
-        height: '48px', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '1px solid var(--color-bg-elevation-2)', boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+        height: '64px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderBottom: '1px solid var(--color-bg-elevation-2)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)', flexShrink: 0
       }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0' }}># {channelName || `channel-${channelId}`}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+           <h3 style={{ fontSize: '18px', fontWeight: '800', margin: '0', color: 'white' }}># {channelName || `channel-${channelId}`}</h3>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button 
+            onClick={() => handleAiAction('standup', {})} 
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--color-bg-base)', backgroundColor: 'var(--color-success)', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', transition: 'opacity 0.2s' }} 
+            onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+            onMouseOut={e => e.currentTarget.style.opacity = 1}
+          >
+            <Sparkles size={16} /> Daily Standup
+          </button>
+          <button 
+            onClick={summarizeChat}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: 'white', backgroundColor: 'var(--color-primary)', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', transition: 'opacity 0.2s' }} 
+            onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+            onMouseOut={e => e.currentTarget.style.opacity = 1}
+          >
+            <Sparkles size={16} /> Summarize Chat
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }} className="no-scrollbar">
+      <div style={{ flex: 1, padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }} className="no-scrollbar">
+        
+        {/* Empty State Guard */}
+        {messages.length === 0 && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '32px' }}>
+             <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--color-bg-elevation-3)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
+                <span style={{ fontSize: '32px' }}>👋</span>
+             </div>
+             <h2 style={{ fontSize: '32px', fontWeight: '800', margin: '0 0 8px 0', color: 'white' }}>Welcome to #{channelName || `channel-${channelId}`}!</h2>
+             <p style={{ color: 'var(--color-text-muted)', fontSize: '16px', margin: 0 }}>This is the start of the channel. Say hello!</p>
+          </div>
+        )}
         {messages.map((msg, idx) => {
           const isOwn = user && msg.user && msg.user.username === user.username;
           return (
@@ -176,11 +234,30 @@ const MessageList = ({ channelId, channelName }) => {
                     <div style={{ backgroundColor: '#141414', padding: '4px 8px', fontSize: '10px', color: '#888', textTransform: 'uppercase' }}>
                       {msg.snippet.language}
                     </div>
-                    <pre style={{ margin: 0, padding: '12px', fontSize: '13px' }}>
+                    <pre style={{ margin: 0, padding: '16px', fontSize: '14px', lineHeight: '1.4' }}>
                       <code className={`language-${msg.snippet.language || 'javascript'}`}>
                         {msg.snippet.codeContent}
                       </code>
                     </pre>
+                    <div style={{ display: 'flex', backgroundColor: '#141414', borderTop: '1px solid #333', padding: '4px 8px' }}>
+                      <button 
+                        onClick={() => handleAiAction('explain', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language })}
+                        style={{ flex: 1, color: '#aaa', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', padding: '6px', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 0.2s' }}
+                        onMouseOver={e => e.currentTarget.style.color = '#fff'}
+                        onMouseOut={e => e.currentTarget.style.color = '#aaa'}
+                      >
+                        <FileText size={14} /> Explain Code
+                      </button>
+                      <div style={{ width: '1px', backgroundColor: '#333', margin: '0 8px' }} />
+                      <button 
+                         onClick={() => handleAiAction('suggest', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language })}
+                        style={{ flex: 1, color: '#aaa', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', padding: '6px', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 0.2s' }}
+                        onMouseOver={e => e.currentTarget.style.color = '#fff'}
+                        onMouseOut={e => e.currentTarget.style.color = '#aaa'}
+                      >
+                        <Code size={14} /> Suggest Improvements
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -204,7 +281,7 @@ const MessageList = ({ channelId, channelName }) => {
       </div>
 
       {/* Input Area */}
-      <div style={{ padding: '0 16px 16px 16px' }}>
+      <div style={{ padding: '0 24px 24px 24px' }}>
         <ChatInput 
           onSend={handleSendMessage} 
           onTyping={handleTyping} 
@@ -212,6 +289,31 @@ const MessageList = ({ channelId, channelName }) => {
           onCancelReply={() => setReplyTo(null)} 
         />
       </div>
+
+      <Modal isOpen={aiModalContent.isOpen} onClose={() => { if(!isAiLoading) setAiModalContent({ ...aiModalContent, isOpen: false })}} title={aiModalContent.title}>
+        {isAiLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
+               <Sparkles size={48} color="var(--color-primary)" style={{ animation: 'pulse 1.5s infinite ease-in-out' }} />
+               <p style={{ marginTop: '16px', color: 'var(--color-text-muted)' }}>Analyzing code context...</p>
+               <style dangerouslySetInnerHTML={{__html: `
+                 @keyframes pulse {
+                   0% { transform: scale(0.9); opacity: 0.7; }
+                   50% { transform: scale(1.1); opacity: 1; }
+                   100% { transform: scale(0.9); opacity: 0.7; }
+                 }
+               `}} />
+            </div>
+        ) : (
+            <>
+                <div style={{ color: 'var(--color-text-base)', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: 'var(--color-bg-base)', padding: '16px', borderRadius: '8px', border: '1px solid var(--color-bg-elevation-3)' }}>
+                  {aiModalContent.message}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                  <button onClick={() => setAiModalContent({ ...aiModalContent, isOpen: false })} className="btn-primary">Got it</button>
+                </div>
+            </>
+        )}
+      </Modal>
     </div>
   );
 };
