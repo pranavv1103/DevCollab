@@ -25,6 +25,7 @@ import java.util.Optional;
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api")
+@SuppressWarnings("null")
 public class MessageController {
 
     @Autowired
@@ -114,9 +115,7 @@ public class MessageController {
         }
 
         Message savedMessage = messageRepository.save(message);
-        
-        // TODO: Broadcast to WebSocket when that is implemented
-        
+
         return ResponseEntity.ok(savedMessage);
     }
 

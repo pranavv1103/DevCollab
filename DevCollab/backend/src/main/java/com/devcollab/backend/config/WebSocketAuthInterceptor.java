@@ -8,6 +8,7 @@ import com.devcollab.backend.repository.ChannelRepository;
 import com.devcollab.backend.repository.ServerMemberRepository;
 import com.devcollab.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -18,6 +19,7 @@ import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 import java.util.Map;
 
+@SuppressWarnings("null")
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
@@ -34,7 +36,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private UserRepository userRepository;
 
     @Override
-    public Message<?> preSend(Message<?> message, MessageChannel channel) {
+    public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             String token = accessor.getFirstNativeHeader("Authorization");

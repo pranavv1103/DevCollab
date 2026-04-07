@@ -15,6 +15,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+@SuppressWarnings("null")
 @Component
 public class WebSocketEventListener {
 

@@ -21,6 +21,7 @@ import java.util.Optional;
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/users")
+@SuppressWarnings("null")
 public class UserController {
 
     @Autowired
@@ -94,8 +95,9 @@ public class UserController {
                 Files.createDirectories(uploadPath);
             }
 
-            String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
-            String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            String rawFilename = file.getOriginalFilename();
+            String originalFilename = StringUtils.cleanPath(rawFilename != null ? rawFilename : "upload");
+            String extension = originalFilename.contains(".") ? originalFilename.substring(originalFilename.lastIndexOf(".")) : ".bin";
             String newFilename = "user_" + id + "_" + System.currentTimeMillis() + extension;
             
             Path filePath = uploadPath.resolve(newFilename);
