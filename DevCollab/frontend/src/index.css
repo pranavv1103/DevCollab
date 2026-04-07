@@ -173,3 +173,39 @@ input:focus {
   background-color: rgba(255,255,255,0.1);
   transform: scale(1.05);
 }
+
+/* Hide scrollbar while still scrollable */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Message action buttons — only appear on hover */
+.message-actions {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+.message-container:hover .message-actions {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Disabled button state */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Channel delete button only visible on row hover */
+.channel-delete-btn {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+div:hover > a + .channel-delete-btn,
+div:hover > .channel-delete-btn {
+  opacity: 1;
+}

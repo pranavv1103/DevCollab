@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "channels")
@@ -34,4 +35,9 @@ public class Channel {
     @JoinColumn(name = "server_id", nullable = false)
     @JsonIgnore
     private Server server;
+
+    @JsonProperty("serverId")
+    public Long getServerId() {
+        return server != null ? server.getId() : null;
+    }
 }

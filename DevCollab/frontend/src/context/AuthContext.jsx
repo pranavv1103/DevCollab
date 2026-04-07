@@ -5,8 +5,10 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch { return null; }
   });
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
@@ -15,8 +17,10 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       if (!user) {
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) setUser(JSON.parse(savedUser));
+        try {
+          const savedUser = localStorage.getItem('user');
+          if (savedUser) setUser(JSON.parse(savedUser));
+        } catch { /* ignore */ }
       }
     } else {
       delete axios.defaults.headers.common['Authorization'];
@@ -28,10 +32,11 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const res = await axios.post('http://localhost:9090/api/auth/login', { username, password });
+      const userData = { ...res.data, id: res.data.id };
       localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data));
+      localStorage.setItem('user', JSON.stringify(userData));
       setToken(res.data.token);
-      setUser(res.data);
+      setUser(userData);
       return true;
     } catch (error) {
       console.error("Login failed", error);
@@ -49,6 +54,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (updated) => {
+    const newUser = { ...user, ...updated };
+    localStorage.setItem('user', JSON.stringify(newUser));
+    setUser(newUser);
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -57,7 +68,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, register, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, register, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

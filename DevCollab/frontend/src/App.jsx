@@ -9,8 +9,16 @@ import ServerView from './pages/ServerView';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = React.useContext(AuthContext);
-  if (loading) return <div>Loading...</div>;
-  return user ? children : <Navigate to="/login" />;
+  if (loading) return (
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-base)' }}>
+      <div style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid var(--color-bg-elevation-3)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        Loading DevCollab...
+      </div>
+    </div>
+  );
+  return user ? children : <Navigate to="/login" replace />;
 };
 
 function App() {
@@ -30,6 +38,7 @@ function App() {
               <Route path="servers/:serverId" element={<ServerView />} />
               <Route index element={<ServerView />} />
             </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </WebSocketProvider>

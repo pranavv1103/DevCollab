@@ -5,6 +5,8 @@ import com.devcollab.backend.entity.Server;
 import com.devcollab.backend.entity.ServerMember;
 import com.devcollab.backend.entity.ServerRole;
 import com.devcollab.backend.entity.User;
+import com.devcollab.backend.repository.ChannelRepository;
+import com.devcollab.backend.repository.MessageRepository;
 import com.devcollab.backend.repository.ServerMemberRepository;
 import com.devcollab.backend.repository.ServerRepository;
 import com.devcollab.backend.repository.UserRepository;
@@ -15,7 +17,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -32,6 +36,12 @@ public class ServerController {
 
     @Autowired
     ServerMemberRepository serverMemberRepository;
+
+    @Autowired
+    ChannelRepository channelRepository;
+
+    @Autowired
+    MessageRepository messageRepository;
 
     @GetMapping
     public ResponseEntity<List<Server>> getUserServers() {
@@ -169,5 +179,49 @@ public class ServerController {
             return ResponseEntity.ok(server);
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/{serverId}/my-role")
+    public ResponseEntity<?> getMyRole(@PathVariable Long serverId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+        if (!memberOpt.isPresent()) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Not a member of this server"));
+        }
+        Map<String, String> result = new HashMap<>();
+        result.put("role", memberOpt.get().getRole().toString());
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{serverId}/analytics")
+    public ResponseEntity<?> getServerAnalytics(@PathVariable Long serverId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+        if (!memberOpt.isPresent()) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Not a member of this server"));
+        }
+        long memberCount = serverMemberRepository.findByServerId(serverId).size();
+        long channelCount = channelRepository.findByServerId(serverId).size();
+        long weeklyMessages = messageRepository.countByChannelServerIdAndTimestampAfter(serverId, LocalDateTime.now().minusDays(7));
+        Map<String, Object> analytics = new HashMap<>();
+        analytics.put("memberCount", memberCount);
+        analytics.put("channelCount", channelCount);
+        analytics.put("weeklyMessages", weeklyMessages);
+        return ResponseEntity.ok(analytics);
+    }
+
+    @DeleteMapping("/{serverId}/leave")
+    public ResponseEntity<?> leaveServer(@PathVariable Long serverId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+        if (!memberOpt.isPresent()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Not a member of this server"));
+        }
+        ServerMember member = memberOpt.get();
+        if (member.getRole() == ServerRole.OWNER) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Transfer ownership before leaving"));
+        }
+        serverMemberRepository.delete(member);
+        return ResponseEntity.ok(new MessageResponse("Left server successfully"));
     }
 }

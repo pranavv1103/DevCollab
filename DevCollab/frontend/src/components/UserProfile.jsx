@@ -175,6 +175,34 @@ const UserProfile = () => {
           </div>
 
           <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>LinkedIn URL</label>
+            {editMode ? (
+              <input
+                style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--color-bg-elevation-3)', backgroundColor: 'var(--color-bg-base)', color: 'white' }}
+                value={formData.linkedinUrl || ''}
+                onChange={e => setFormData({...formData, linkedinUrl: e.target.value})}
+                placeholder="https://linkedin.com/in/..."
+              />
+            ) : (
+              <div style={{ color: 'var(--color-primary)' }}>{profile.linkedinUrl ? <a href={profile.linkedinUrl} target="_blank" rel="noreferrer" style={{color: 'inherit'}}>{profile.linkedinUrl}</a> : 'Not specified'}</div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Portfolio URL</label>
+            {editMode ? (
+              <input
+                style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--color-bg-elevation-3)', backgroundColor: 'var(--color-bg-base)', color: 'white' }}
+                value={formData.portfolioUrl || ''}
+                onChange={e => setFormData({...formData, portfolioUrl: e.target.value})}
+                placeholder="https://yourportfolio.com"
+              />
+            ) : (
+              <div style={{ color: 'var(--color-primary)' }}>{profile.portfolioUrl ? <a href={profile.portfolioUrl} target="_blank" rel="noreferrer" style={{color: 'inherit'}}>{profile.portfolioUrl}</a> : 'Not specified'}</div>
+            )}
+          </div>
+
+          <div>
              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Bio</label>
              {editMode ? (
                <textarea 

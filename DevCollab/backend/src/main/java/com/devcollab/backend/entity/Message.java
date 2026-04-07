@@ -47,7 +47,7 @@ public class Message {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_message_id")
-    @JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"parentMessage", "reactions", "snippet", "channel"})
     private Message parentMessage;
     
     @Builder.Default
