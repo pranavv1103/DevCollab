@@ -105,6 +105,13 @@ public class MessageController {
                 .timestamp(LocalDateTime.now())
                 .build();
 
+        if (request.getParentMessageId() != null) {
+            Message parent = messageRepository.findById(request.getParentMessageId()).orElse(null);
+            if (parent != null) {
+                message.setParentMessage(parent);
+            }
+        }
+
         if (request.getCodeContent() != null && !request.getCodeContent().isEmpty()) {
             CodeSnippet snippet = CodeSnippet.builder()
                     .codeContent(request.getCodeContent())

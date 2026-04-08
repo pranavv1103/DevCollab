@@ -126,7 +126,7 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
   const fetchMessages = async () => {
     try {
       const res = await axios.get(`http://localhost:9090/api/channels/${channelId}/messages?page=0&size=50`);
-      const msgs = res.data.content.reverse();
+      const msgs = (res.data?.content || []).reverse();
       const seen = new Set();
       msgs.forEach(m => { if (m.id) seen.add(m.id); });
       messageIdsRef.current = seen;

@@ -3,6 +3,12 @@ import axios from 'axios';
 
 export const AuthContext = createContext();
 
+// Set header immediately on module load so any early API calls are authenticated
+const _savedToken = localStorage.getItem('token');
+if (_savedToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${_savedToken}`;
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
@@ -12,6 +18,23 @@ export const AuthProvider = ({ children }) => {
   });
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
+
+  // Intercept 401 responses globally — force logout when token is expired/invalid
+  useEffect(() => {
+    const interceptorId = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptorId);
+  }, []);
 
   useEffect(() => {
     if (token) {

@@ -61,14 +61,23 @@ const UserProfile = () => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Only image files (JPEG, PNG, GIF, WebP) are allowed.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be smaller than 5 MB.');
+      return;
+    }
+
     setUploadingAvatar(true);
     const formDataUpload = new FormData();
     formDataUpload.append('file', file);
 
     try {
-        const res = await axios.post(`http://localhost:9090/api/users/${user.id}/avatar`, formDataUpload, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        // Do NOT set Content-Type manually — axios auto-sets multipart/form-data with boundary for FormData
+        const res = await axios.post(`http://localhost:9090/api/users/${user.id}/avatar`, formDataUpload);
         const newUrl = `http://localhost:9090${res.data.message}`;
         setFormData(prev => ({...prev, profilePictureUrl: newUrl}));
         setProfile(prev => ({...prev, profilePictureUrl: newUrl}));
