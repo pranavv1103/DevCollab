@@ -94,6 +94,14 @@ public class ServerController {
                 .build();
         serverMemberRepository.save(member);
 
+        com.devcollab.backend.entity.Channel general = com.devcollab.backend.entity.Channel.builder()
+                .name("general")
+                .type("text")
+                .isPrivate(false)
+                .server(savedServer)
+                .build();
+        channelRepository.save(general);
+
         return ResponseEntity.ok(savedServer);
     }
     
