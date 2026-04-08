@@ -96,13 +96,21 @@ public class AiService {
         List<String> keywords = detectKeywords(code, lang);
         String kw = keywords.isEmpty() ? "general logic" : String.join(", ", keywords);
 
+        String firstLine = code.lines().map(String::trim).filter(l -> !l.isEmpty()).findFirst().orElse("");
+        String purpose = firstLine.length() > 60 ? firstLine.substring(0, 60) + "…" : firstLine;
         return new AiResponse(
-            "**Code Explanation (" + lang + ")**\n\n" +
-            "This " + lang + " snippet is " + lines + " line" + (lines == 1 ? "" : "s") + " long. " +
-            "It appears to use: **" + kw + "**.\n\n" +
-            "The code defines structured logic — likely a function or method that processes input and produces a result. " +
-            "Reading from top to bottom, each statement builds on the previous context.\n\n" +
-            "_Tip: Add an OpenAI or Groq API key (env var `GROQ_API_KEY`) for real LLM-powered explanations._"
+            "## Code Explanation — " + lang.toUpperCase() + "\n\n" +
+            "**Overview:** This " + lang + " snippet is **" + lines + " line" + (lines == 1 ? "" : "s") + "** long.\n" +
+            (kw.equals("general logic") ? "" : "**Constructs detected:** " + kw + "\n") +
+            (purpose.isEmpty() ? "" : "**Entry point:** `" + purpose + "`\n") +
+            "\n" +
+            "**What it does:** The code defines logical operations"
+            + (code.contains("return") ? " and returns a value" : "")
+            + (code.contains("throws") || code.contains("try") ? ", handles exceptions" : "")
+            + ".\n\n" +
+            "**Reading guide:** Parse top-to-bottom — each statement builds on the previous context. " +
+            (lines > 20 ? "Given its length, consider reviewing each block independently." : "Short and focused.") +
+            "\n\nFor LLM-powered deep explanations, set the `GROQ_API_KEY` environment variable."
         );
     }
 
@@ -123,13 +131,18 @@ public class AiService {
         String who = contributors.isEmpty() ? "the team" : String.join(", ", contributors);
         String what = topics.isEmpty() ? "project tasks" : String.join(", ", topics);
 
+        String lastFew = msgs.stream().skip(Math.max(0, msgs.size() - 3))
+            .map(m -> m.contains(": ") ? m.substring(m.indexOf(": ") + 2) : m)
+            .map(m -> truncate(m, 60))
+            .collect(Collectors.joining(" → "));
         return new AiResponse(
-            "**Chat Summary** (" + count + " messages)\n\n" +
-            "- **Participants:** " + who + "\n" +
-            "- **Topics discussed:** " + what + "\n" +
-            "- **Message volume:** " + count + " messages in this session\n" +
-            (count > 0 ? "- **Latest context:** " + truncate(msgs.get(count - 1), 80) + "\n" : "") +
-            "\n_For AI-generated summaries add a `GROQ_API_KEY` environment variable._"
+            "## Chat Summary\n\n" +
+            "**Participants:** " + who + "\n" +
+            "**Topics:** " + what + "\n" +
+            "**Messages:** " + count + " in this session\n" +
+            (count > 0 ? "\n**Recent thread:** " + lastFew + "\n" : "") +
+            "\n---\n" +
+            "_Tip: Add a `GROQ_API_KEY` for LLM-powered summaries with deeper insight._"
         );
     }
 
@@ -164,7 +177,9 @@ public class AiService {
         List<String> inProgressItems = extractActionItems(msgs, List.of("working on", "implementing", "building", "reviewing", "testing", "investigating"));
         List<String> blockers = extractActionItems(msgs, List.of("blocked", "stuck", "waiting for", "issue with", "broken", "failing", "problem"));
 
-        StringBuilder sb = new StringBuilder("**Daily Standup Summary**\n\n");
+        StringBuilder sb = new StringBuilder("## Daily Standup\n\n");
+        String date = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy"));
+        sb.append("**Date:** ").append(date).append(" · ");
         sb.append("**Team:** ").append(contributors.isEmpty() ? "Team" : String.join(", ", contributors)).append("\n\n");
         sb.append("**✅ Completed:**\n");
         if (doneItems.isEmpty()) sb.append("- Review recent messages for specifics\n");
@@ -194,7 +209,7 @@ public class AiService {
         List<String> exceptions = detectExceptions(combined);
         String severity = detectSeverity(combined);
 
-        StringBuilder sb = new StringBuilder("**Bug Triage Report**\n\n");
+        StringBuilder sb = new StringBuilder("## Bug Triage Report\n\n");
         sb.append("**Severity:** ").append(severity).append("\n\n");
         if (!exceptions.isEmpty()) {
             sb.append("**Detected Errors:**\n");
@@ -240,11 +255,21 @@ public class AiService {
         List<String> questions = extractPatternMatches(msgs, List.of("?", "should we", "what about", "how do we", "wondering if"));
         Set<String> contributors = extractContributors(msgs);
 
-        StringBuilder sb = new StringBuilder("**Meeting Notes**\n\n");
+        StringBuilder sb = new StringBuilder("## Meeting Notes\n\n");
         sb.append("**Attendees:** ").append(contributors.isEmpty() ? "Team" : String.join(", ", contributors)).append("\n\n");
+        // If no explicit decisions, extract the most meaningful messages as context
+        List<String> contextLines = msgs.stream()
+            .filter(m -> m.contains(": "))
+            .map(m -> m.substring(m.indexOf(": ") + 2))
+            .filter(c -> c.length() > 15)
+            .limit(4)
+            .map(c -> truncate(c, 90))
+            .collect(java.util.stream.Collectors.toList());
         sb.append("**Decisions Made:**\n");
-        if (decisions.isEmpty()) sb.append("- See chat messages for context\n");
-        else decisions.stream().limit(5).forEach(d -> sb.append("- ").append(d).append("\n"));
+        if (decisions.isEmpty()) {
+            if (!contextLines.isEmpty()) contextLines.forEach(c -> sb.append("- ").append(c).append("\n"));
+            else sb.append("- No explicit decisions recorded in this session\n");
+        } else decisions.stream().limit(5).forEach(d -> sb.append("- ").append(d).append("\n"));
         sb.append("\n**Action Items:**\n");
         if (actions.isEmpty()) sb.append("- [ ] Follow up on outstanding tasks\n");
         else actions.stream().limit(6).forEach(a -> sb.append("- [ ] ").append(a).append("\n"));

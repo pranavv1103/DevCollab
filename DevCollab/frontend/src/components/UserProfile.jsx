@@ -138,9 +138,20 @@ const UserProfile = () => {
                 <h3 style={{ margin: 0, fontSize: '20px' }}>{profile.username}</h3>
              </div>
           </div>
-          <button className="btn-secondary" onClick={() => editMode ? handleSave() : setEditMode(true)} disabled={saveStatus === 'saving'}>
-            {saveStatus === 'saving' ? 'Saving…' : editMode ? 'Save Profile' : 'Edit Profile'}
-          </button>
+          {editMode ? (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn-secondary" onClick={() => { setEditMode(false); setFormData(profile); setSaveStatus(''); }}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={handleSave} disabled={saveStatus === 'saving'}>
+                {saveStatus === 'saving' ? 'Saving…' : 'Save Profile'}
+              </button>
+            </div>
+          ) : (
+            <button className="btn-secondary" onClick={() => setEditMode(true)}>
+              Edit Profile
+            </button>
+          )}
         </div>
         {saveStatus === 'saved' && (
           <div style={{ padding: '8px 12px', backgroundColor: 'rgba(35,134,54,0.2)', border: '1px solid rgba(35,134,54,0.4)', borderRadius: '6px', color: '#3fb950', fontSize: '13px' }}>

@@ -6,7 +6,39 @@ import ChatInput from './ChatInput';
 import Modal from './Modal';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-twilight.css';
-import { Sparkles, FileText, Code, ChevronDown, Bug, ClipboardList } from 'lucide-react';
+import { Sparkles, FileText, Code, ChevronDown, Bug, ClipboardList, Search, Brain } from 'lucide-react';
+
+// ── Inline markdown renderer ──────────────────────────────────────────────────
+const renderInline = (text, key) => {
+  if (!text) return null;
+  const parts = [];
+  const regex = /\*\*(.+?)\*\*|`([^`]+)`|_(.+?)_/g;
+  let last = 0, m, idx = 0;
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > last) parts.push(<span key={idx++}>{text.slice(last, m.index)}</span>);
+    if (m[1]) parts.push(<strong key={idx++} style={{ color: '#e2e8f0' }}>{m[1]}</strong>);
+    else if (m[2]) parts.push(<code key={idx++} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '3px', padding: '1px 5px', fontSize: '12px', fontFamily: 'monospace', color: '#93c5fd' }}>{m[2]}</code>);
+    else if (m[3]) parts.push(<em key={idx++}>{m[3]}</em>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(<span key={idx++}>{text.slice(last)}</span>);
+  return <span key={key}>{parts}</span>;
+};
+
+const renderMarkdown = (text) => {
+  if (!text) return null;
+  return text.split('\n').map((line, i) => {
+    if (line.startsWith('### ')) return <h4 key={i} style={{ margin: '14px 0 4px', fontSize: '13px', fontWeight: '700', color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{renderInline(line.slice(4), i)}</h4>;
+    if (line.startsWith('## ')) return <h3 key={i} style={{ margin: '16px 0 6px', fontSize: '15px', fontWeight: '700', color: 'white' }}>{renderInline(line.slice(3), i)}</h3>;
+    if (line.startsWith('# ')) return <h2 key={i} style={{ margin: '0 0 12px', fontSize: '17px', fontWeight: '800', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>{renderInline(line.slice(2), i)}</h2>;
+    if (line.startsWith('- [ ] ') || line.startsWith('* [ ] ')) return <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', paddingLeft: '4px' }}><span style={{ color: '#475569', fontSize: '14px', flexShrink: 0 }}>☐</span><span>{renderInline(line.slice(6), i)}</span></div>;
+    if (line.startsWith('- [x] ') || line.startsWith('* [x] ')) return <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', paddingLeft: '4px' }}><span style={{ color: 'var(--color-success)', fontSize: '14px', flexShrink: 0 }}>☑</span><span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{renderInline(line.slice(6), i)}</span></div>;
+    if (line.startsWith('- ') || line.startsWith('* ')) return <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', paddingLeft: '4px' }}><span style={{ color: 'var(--color-primary)', fontSize: '10px', flexShrink: 0, marginTop: '2px' }}>●</span><span>{renderInline(line.slice(2), i)}</span></div>;
+    if (/^\d+\.\s/.test(line)) { const m2 = line.match(/^(\d+)\.\s(.*)/); return m2 ? <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px', paddingLeft: '4px' }}><span style={{ color: 'var(--color-primary)', fontSize: '12px', fontWeight: '700', flexShrink: 0, minWidth: '18px' }}>{m2[1]}.</span><span>{renderInline(m2[2], i)}</span></div> : <p key={i} style={{ margin: '2px 0' }}>{renderInline(line, i)}</p>; }
+    if (line.trim() === '') return <div key={i} style={{ height: '8px' }} />;
+    return <p key={i} style={{ margin: '2px 0', lineHeight: '1.65' }}>{renderInline(line, i)}</p>;
+  });
+};
 
 const MessageList = ({ channelId, channelName, userRole, serverId }) => {
   const [messages, setMessages] = useState([]);
@@ -18,15 +50,16 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
   const editsSubRef = useRef(null);
   const deletesSubRef = useRef(null);
   const reactionsSubRef = useRef(null);
-  const messageIdsRef = useRef(new Set()); // for deduplication
+  const messageIdsRef = useRef(new Set());
   const [aiModalContent, setAiModalContent] = useState({ isOpen: false, title: '', message: '' });
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiMenu, setShowAiMenu] = useState(false);
   const aiMenuRef = useRef(null);
-
   const [typingUsers, setTypingUsers] = useState([]);
   const [replyTo, setReplyTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
+  // Explain code inline modal
+  const [explainModal, setExplainModal] = useState({ isOpen: false, code: '', language: 'javascript' });
 
   // Close AI menu on outside click
   useEffect(() => {
@@ -201,6 +234,11 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
     handleAiAction('bug-triage', { chatMessages: textMessages });
   };
 
+  const openExplainModal = () => {
+    setShowAiMenu(false);
+    setExplainModal({ isOpen: true, code: '', language: 'javascript' });
+  };
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg-base)', overflow: 'hidden' }}>
       {/* Header */}
@@ -243,6 +281,7 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
                 { label: 'Summarize Chat', icon: <FileText size={14} />, action: summarizeChat },
                 { label: 'Meeting Notes', icon: <ClipboardList size={14} />, action: generateMeetingNotes },
                 { label: 'Bug Triage', icon: <Bug size={14} />, action: triageBugs },
+                { label: 'Explain Code', icon: <Brain size={14} />, action: openExplainModal },
               ].map(item => (
                 <button
                   key={item.label}
@@ -279,80 +318,96 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
 
         {messages.map((msg, idx) => {
           const isOwn = user && msg.user && msg.user.username === user.username;
+          const hasCode = !!msg.snippet?.codeContent;
           return (
-            <div key={msg.id || idx} className="message-container" style={{ display: 'flex', flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start' }}>
-              {/* Thread reply indicator */}
+            <div key={msg.id || idx} className="message-container" style={{ display: 'flex', flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start', maxWidth: '100%' }}>
+              {/* Reply / thread quote */}
               {msg.parentMessage && (
-                <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '4px', marginLeft: isOwn ? 0 : '12px', marginRight: isOwn ? '12px' : 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '14px', height: '10px', borderLeft: '2px solid var(--color-bg-elevation-3)', borderTop: '2px solid var(--color-bg-elevation-3)', borderTopLeftRadius: '4px', flexShrink: 0 }} />
-                  Replying to <strong>{msg.parentMessage.user?.username}</strong>: {(msg.parentMessage.content || '').substring(0, 40)}{(msg.parentMessage.content?.length || 0) > 40 ? '…' : ''}
+                <div style={{
+                  display: 'flex', alignItems: 'stretch', gap: '0',
+                  marginBottom: '4px',
+                  marginLeft: isOwn ? 0 : '36px',
+                  marginRight: isOwn ? '4px' : 0,
+                  maxWidth: '70%',
+                }}>
+                  <div style={{ width: '2px', background: 'var(--color-bg-elevation-3)', borderRadius: '2px', flexShrink: 0 }} />
+                  <div style={{
+                    fontSize: '12px', color: 'var(--color-text-muted)',
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: '0 6px 6px 0',
+                    padding: '5px 10px',
+                    borderTop: '1px solid var(--color-bg-elevation-3)',
+                    borderRight: '1px solid var(--color-bg-elevation-3)',
+                    borderBottom: '1px solid var(--color-bg-elevation-3)',
+                    overflow: 'hidden',
+                  }}>
+                    <span style={{ color: 'var(--color-primary)', fontWeight: '600', marginRight: '5px' }}>@{msg.parentMessage.user?.username}</span>
+                    <span style={{ opacity: 0.7 }}>{(msg.parentMessage.content || '').substring(0, 80)}{(msg.parentMessage.content?.length || 0) > 80 ? '…' : ''}</span>
+                  </div>
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px', gap: '8px' }}>
-                {!isOwn && (
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #5865f2, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: 'white', fontWeight: '700', flexShrink: 0 }}>
-                    {(msg.user?.username || '?').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span style={{ fontWeight: '700', fontSize: '13px', color: isOwn ? 'var(--color-primary)' : 'var(--color-text-base)' }}>
+              {/* Author row */}
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '3px', gap: '7px', flexDirection: isOwn ? 'row-reverse' : 'row' }}>
+                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: isOwn ? 'linear-gradient(135deg, #5865f2, #667eea)' : 'linear-gradient(135deg, #374151, #4b5563)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'white', fontWeight: '700', flexShrink: 0, overflow: 'hidden' }}>
+                  {(msg.user?.username || '?').charAt(0).toUpperCase()}
+                </div>
+                <span style={{ fontWeight: '600', fontSize: '13px', color: isOwn ? 'var(--color-primary)' : '#cbd5e1' }}>
                   {msg.user?.username}
                 </span>
                 <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {msg.isEdited && <em> (edited)</em>}
+                  {msg.isEdited && <em style={{ opacity: 0.6 }}> · edited</em>}
                 </span>
               </div>
 
+              {/* Bubble */}
               <div className="message-bubble" style={{
                 backgroundColor: isOwn ? 'var(--color-primary)' : 'var(--color-bg-elevation-2)',
-                padding: '8px 12px', borderRadius: '8px', maxWidth: '75%', position: 'relative',
-                borderTopRightRadius: isOwn ? '2px' : '8px',
-                borderTopLeftRadius: isOwn ? '8px' : '2px',
+                padding: '9px 13px',
+                borderRadius: isOwn ? '14px 4px 14px 14px' : '4px 14px 14px 14px',
+                maxWidth: '72%',
+                position: 'relative',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
               }}>
-                {msg.content && <p style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: '14px', lineHeight: '1.5' }}>{msg.content}</p>}
+                {msg.content && <p style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: '14px', lineHeight: '1.55', wordBreak: 'break-word' }}>{msg.content}</p>}
 
-                {msg.snippet?.codeContent && (
-                  <div style={{ marginTop: msg.content ? '8px' : '0', borderRadius: '6px', overflow: 'hidden', border: '1px solid #2a2a2a' }}>
-                    <div style={{ backgroundColor: '#1a1a1a', padding: '4px 10px', fontSize: '11px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {msg.snippet.language || 'code'}
+                {hasCode && (
+                  <div style={{ marginTop: msg.content ? '10px' : '0', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ backgroundColor: '#161b22', padding: '5px 12px', fontSize: '11px', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{msg.snippet.language || 'code'}</span>
+                      <span style={{ opacity: 0.5 }}>{(msg.snippet.codeContent || '').split('\n').length} lines</span>
                     </div>
-                    <pre style={{ margin: 0, padding: '12px', fontSize: '13px', lineHeight: '1.5', backgroundColor: '#0d0d0d', overflowX: 'auto' }}>
+                    <pre style={{ margin: 0, padding: '12px 14px', fontSize: '12.5px', lineHeight: '1.6', backgroundColor: '#0d1117', overflowX: 'auto', maxHeight: '260px' }}>
                       <code className={`language-${msg.snippet.language || 'javascript'}`}>
                         {msg.snippet.codeContent}
                       </code>
                     </pre>
-                    <div style={{ display: 'flex', backgroundColor: '#1a1a1a', borderTop: '1px solid #2a2a2a', padding: '4px 8px' }}>
-                      <button
-                        onClick={() => handleAiAction('explain', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language })}
-                        style={{ flex: 1, color: '#888', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', padding: '5px', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 0.15s' }}
-                        onMouseOver={e => e.currentTarget.style.color = '#fff'}
-                        onMouseOut={e => e.currentTarget.style.color = '#888'}
-                      ><FileText size={13} /> Explain</button>
-                      <div style={{ width: '1px', backgroundColor: '#2a2a2a' }} />
-                      <button
-                        onClick={() => handleAiAction('suggest', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language })}
-                        style={{ flex: 1, color: '#888', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', padding: '5px', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 0.15s' }}
-                        onMouseOver={e => e.currentTarget.style.color = '#fff'}
-                        onMouseOut={e => e.currentTarget.style.color = '#888'}
-                      ><Code size={13} /> Suggest</button>
-                      <div style={{ width: '1px', backgroundColor: '#2a2a2a' }} />
-                      <button
-                        onClick={() => handleAiAction('code-review', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language })}
-                        style={{ flex: 1, color: '#888', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', padding: '5px', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 0.15s' }}
-                        onMouseOver={e => e.currentTarget.style.color = '#fff'}
-                        onMouseOut={e => e.currentTarget.style.color = '#888'}
-                      ><Sparkles size={13} /> Review</button>
+                    <div style={{ display: 'flex', backgroundColor: '#161b22', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '3px 6px' }}>
+                      {[
+                        { label: 'Explain', icon: <Brain size={12} />, fn: () => handleAiAction('explain', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language }) },
+                        { label: 'Suggest', icon: <Sparkles size={12} />, fn: () => handleAiAction('suggest', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language }) },
+                        { label: 'Review', icon: <Code size={12} />, fn: () => handleAiAction('code-review', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language }) },
+                      ].map((btn, bi) => (
+                        <React.Fragment key={btn.label}>
+                          {bi > 0 && <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.06)' }} />}
+                          <button onClick={btn.fn}
+                            style={{ flex: 1, color: '#6b7280', fontSize: '11px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', padding: '5px 4px', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 0.15s', fontWeight: '500' }}
+                            onMouseOver={e => e.currentTarget.style.color = '#e5e7eb'}
+                            onMouseOut={e => e.currentTarget.style.color = '#6b7280'}
+                          >{btn.icon}{btn.label}</button>
+                        </React.Fragment>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Message action toolbar (hover-only via CSS) */}
-              <div className="message-actions" style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 7px', color: 'var(--color-text-muted)' }} onClick={() => setReplyTo(msg)}>↩ Reply</button>
-                {isOwn && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 7px', color: 'var(--color-text-muted)' }} onClick={() => setEditingMessage(msg)}>✏ Edit</button>}
-                {isOwn && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 7px', color: 'var(--color-danger)' }} onClick={() => handleDeleteMessage(msg.id)}>🗑 Delete</button>}
+              {/* Message actions (hover via CSS) */}
+              <div className="message-actions" style={{ display: 'flex', gap: '3px', marginTop: '3px', flexDirection: isOwn ? 'row-reverse' : 'row' }}>
+                <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-text-muted)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px' }} onClick={() => { setReplyTo(msg); setEditingMessage(null); }}>↩ Reply</button>
+                {isOwn && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-text-muted)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px' }} onClick={() => { setEditingMessage(msg); setReplyTo(null); }}>✏ Edit</button>}
+                {isOwn && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-danger)', border: '1px solid rgba(237,66,69,0.3)', borderRadius: '6px' }} onClick={() => handleDeleteMessage(msg.id)}>Delete</button>}
               </div>
             </div>
           );
@@ -388,14 +443,52 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
           </div>
         ) : (
           <>
-            <div style={{ color: 'var(--color-text-base)', lineHeight: '1.7', whiteSpace: 'pre-wrap', backgroundColor: 'var(--color-bg-base)', padding: '16px', borderRadius: '8px', border: '1px solid var(--color-bg-elevation-3)', maxHeight: '60vh', overflowY: 'auto', fontSize: '14px' }} className="no-scrollbar">
-              {aiModalContent.message}
+            <div style={{ color: 'var(--color-text-base)', lineHeight: '1.7', backgroundColor: 'var(--color-bg-base)', padding: '16px 20px', borderRadius: '8px', border: '1px solid var(--color-bg-elevation-3)', maxHeight: '65vh', overflowY: 'auto', fontSize: '13.5px' }} className="no-scrollbar">
+              {renderMarkdown(aiModalContent.message)}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
               <button onClick={() => setAiModalContent(v => ({ ...v, isOpen: false }))} className="btn-primary">Got it</button>
             </div>
           </>
         )}
+      </Modal>
+
+      {/* Explain Code Modal */}
+      <Modal isOpen={explainModal.isOpen} onClose={() => setExplainModal(v => ({ ...v, isOpen: false }))} title="🧠 Explain Code">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--color-text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Language</label>
+            <select value={explainModal.language} onChange={e => setExplainModal(v => ({ ...v, language: e.target.value }))}
+              style={{ background: 'var(--color-bg-base)', color: 'white', border: '1px solid var(--color-bg-elevation-3)', padding: '6px 10px', borderRadius: '6px', outline: 'none', fontSize: '13px', width: '160px' }}>
+              {['javascript','typescript','python','java','html','css','json','bash','sql','go','rust','cpp','c'].map(l => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--color-text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paste Code</label>
+            <textarea
+              value={explainModal.code}
+              onChange={e => setExplainModal(v => ({ ...v, code: e.target.value }))}
+              placeholder="Paste the code you want explained…"
+              style={{ width: '100%', minHeight: '160px', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-bg-elevation-3)', backgroundColor: '#0d1117', color: '#e6edf3', fontFamily: 'var(--font-family-mono)', fontSize: '13px', lineHeight: '1.6', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button onClick={() => setExplainModal(v => ({ ...v, isOpen: false }))} className="btn-secondary">Cancel</button>
+            <button
+              onClick={() => {
+                if (!explainModal.code.trim()) return;
+                setExplainModal(v => ({ ...v, isOpen: false }));
+                handleAiAction('explain', { codeSnippet: explainModal.code, language: explainModal.language });
+              }}
+              className="btn-primary"
+              disabled={!explainModal.code.trim()}
+            >
+              Explain
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
