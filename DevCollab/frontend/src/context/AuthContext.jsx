@@ -19,12 +19,16 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
-  // Intercept 401 responses globally — force logout when token is expired/invalid
+  // Intercept 401 responses globally — force logout when JWT expires.
+  // Only fires when a token already exists to avoid false-positive logouts
+  // caused by the brief window between login() and the useEffect([token]) run.
   useEffect(() => {
     const interceptorId = axios.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
+        const isAuthRoute = error.config?.url?.includes('/api/auth/');
+        const hasToken = !!localStorage.getItem('token');
+        if (error.response?.status === 401 && hasToken && !isAuthRoute) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           setToken(null);
@@ -56,6 +60,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await axios.post('http://localhost:9090/api/auth/login', { username, password });
       const userData = { ...res.data, id: res.data.id };
+      // Set header immediately so any API calls fired on navigation are authenticated.
+      // Do NOT wait for the useEffect([token]) to run — it's too late.
+      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(userData));
       setToken(res.data.token);
