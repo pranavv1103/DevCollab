@@ -126,6 +126,41 @@ public class MessageController {
         return ResponseEntity.ok(savedMessage);
     }
 
+    @PutMapping("/messages/{messageId}")
+    public ResponseEntity<?> editMessage(@PathVariable Long messageId, @RequestBody java.util.Map<String, String> body) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<Message> msgOpt = messageRepository.findById(messageId);
+        if (!msgOpt.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        Message msg = msgOpt.get();
+        if (!msg.getUser().getId().equals(userDetails.getId())) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized"));
+        }
+        String newContent = body.get("content");
+        if (newContent != null) {
+            msg.setContent(newContent);
+            msg.setEdited(true);
+            msg = messageRepository.save(msg);
+        }
+        return ResponseEntity.ok(msg);
+    }
+
+    @DeleteMapping("/messages/{messageId}")
+    public ResponseEntity<?> deleteMessage(@PathVariable Long messageId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<Message> msgOpt = messageRepository.findById(messageId);
+        if (!msgOpt.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        Message msg = msgOpt.get();
+        if (!msg.getUser().getId().equals(userDetails.getId())) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized"));
+        }
+        messageRepository.delete(msg);
+        return ResponseEntity.ok(new MessageResponse("Message deleted"));
+    }
+
     @GetMapping("/messages/search")
     public ResponseEntity<List<Message>> searchMessages(@RequestParam String keyword) {
         List<Message> results = messageRepository.searchByKeyword(keyword);

@@ -19,9 +19,14 @@ import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @SuppressWarnings("null")
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketAuthInterceptor.class);
 
     @Autowired
     private JwtUtils jwtUtils;
@@ -45,10 +50,17 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                 if (jwtUtils.validateJwtToken(token)) {
                     String username = jwtUtils.getUserNameFromJwtToken(token);
                     Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
-                    if (sessionAttributes != null) {
-                        sessionAttributes.put("username", username);
+                    if (sessionAttributes == null) {
+                        sessionAttributes = new java.util.HashMap<>();
+                        accessor.setSessionAttributes(sessionAttributes);
                     }
+                    sessionAttributes.put("username", username);
+                    logger.info("WebSocket CONNECT authenticated: user='{}'", username);
+                } else {
+                    logger.warn("WebSocket CONNECT: JWT validation failed");
                 }
+            } else {
+                logger.warn("WebSocket CONNECT: missing or malformed Authorization header");
             }
         } else if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
             String destination = accessor.getDestination();

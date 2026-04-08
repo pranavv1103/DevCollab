@@ -145,6 +145,14 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
           destination: `/app/chat.editMessage/${channelId}`,
           body: JSON.stringify({ messageId: editingMessage.id, content: text }),
         });
+      } else {
+        // HTTP fallback when WebSocket is disconnected
+        try {
+          const res = await axios.put(`http://localhost:9090/api/messages/${editingMessage.id}`, { content: text });
+          setMessages(prev => prev.map(m => m.id === editingMessage.id ? res.data : m));
+        } catch (err) {
+          console.error('Failed to edit message via HTTP fallback', err);
+        }
       }
       setEditingMessage(null);
       return;
@@ -172,13 +180,22 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
     }
   };
 
-  const handleDeleteMessage = (messageId) => {
+  const handleDeleteMessage = async (messageId) => {
     if (!window.confirm('Delete this message?')) return;
     if (connected && stompClient) {
       stompClient.publish({
         destination: `/app/chat.deleteMessage/${channelId}`,
         body: JSON.stringify({ messageId }),
       });
+    } else {
+      // HTTP fallback when WebSocket is disconnected
+      try {
+        await axios.delete(`http://localhost:9090/api/messages/${messageId}`);
+        setMessages(prev => prev.filter(m => m.id !== messageId));
+        messageIdsRef.current.delete(messageId);
+      } catch (err) {
+        console.error('Failed to delete message via HTTP fallback', err);
+      }
     }
   };
 

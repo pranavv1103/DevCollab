@@ -6,7 +6,18 @@ export const AuthContext = createContext();
 // Set header immediately on module load so any early API calls are authenticated
 const _savedToken = localStorage.getItem('token');
 if (_savedToken) {
-  axios.defaults.headers.common['Authorization'] = `Bearer ${_savedToken}`;
+  // Check token expiry before using it
+  try {
+    const _payload = JSON.parse(atob(_savedToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (_payload.exp && _payload.exp * 1000 < Date.now()) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } else {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${_savedToken}`;
+    }
+  } catch {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${_savedToken}`;
+  }
 }
 
 export const AuthProvider = ({ children }) => {
@@ -16,7 +27,19 @@ export const AuthProvider = ({ children }) => {
       return savedUser ? JSON.parse(savedUser) : null;
     } catch { return null; }
   });
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [token, setToken] = useState(() => {
+    const savedToken = localStorage.getItem('token');
+    if (!savedToken) return null;
+    try {
+      const payload = JSON.parse(atob(savedToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        return null;
+      }
+    } catch { /* keep token if parse fails */ }
+    return savedToken;
+  });
   const [loading, setLoading] = useState(true);
 
   // Intercept 401 responses globally — force logout when JWT expires.
