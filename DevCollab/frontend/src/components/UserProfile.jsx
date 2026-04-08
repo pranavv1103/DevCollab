@@ -12,6 +12,7 @@ const UserProfile = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const fileInputRef = useRef(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(''); // '' | 'saving' | 'saved' | 'error'
 
   useEffect(() => {
     if (user?.id) {
@@ -29,13 +30,30 @@ const UserProfile = () => {
     }
   };
 
+  const updateField = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleSave = async () => {
+    setSaveStatus('saving');
     try {
-      await axios.put(`http://localhost:9090/api/users/${user.id}/profile`, formData);
-      setProfile(formData);
+      const payload = {
+        bio: formData.bio,
+        programmingLanguages: formData.programmingLanguages,
+        githubUrl: formData.githubUrl,
+        linkedinUrl: formData.linkedinUrl,
+        portfolioUrl: formData.portfolioUrl,
+        themePreference: formData.themePreference,
+        profilePictureUrl: formData.profilePictureUrl,
+      };
+      await axios.put(`http://localhost:9090/api/users/${user.id}/profile`, payload);
+      await fetchProfile();
       setEditMode(false);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
       console.error("Failed to update profile", error);
+      setSaveStatus('error');
     }
   };
 
@@ -105,7 +123,7 @@ const UserProfile = () => {
         </button>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="User Settings">
+      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditMode(false); setSaveStatus(''); }} title="User Settings">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--color-bg-elevation-3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
              <div style={{ 
@@ -120,10 +138,20 @@ const UserProfile = () => {
                 <h3 style={{ margin: 0, fontSize: '20px' }}>{profile.username}</h3>
              </div>
           </div>
-          <button className="btn-secondary" onClick={() => editMode ? handleSave() : setEditMode(true)}>
-            {editMode ? 'Save Elements' : 'Edit Profile'}
+          <button className="btn-secondary" onClick={() => editMode ? handleSave() : setEditMode(true)} disabled={saveStatus === 'saving'}>
+            {saveStatus === 'saving' ? 'Saving…' : editMode ? 'Save Profile' : 'Edit Profile'}
           </button>
         </div>
+        {saveStatus === 'saved' && (
+          <div style={{ padding: '8px 12px', backgroundColor: 'rgba(35,134,54,0.2)', border: '1px solid rgba(35,134,54,0.4)', borderRadius: '6px', color: '#3fb950', fontSize: '13px' }}>
+            ✓ Profile saved successfully
+          </div>
+        )}
+        {saveStatus === 'error' && (
+          <div style={{ padding: '8px 12px', backgroundColor: 'rgba(237,66,69,0.15)', border: '1px solid rgba(237,66,69,0.4)', borderRadius: '6px', color: '#ed4245', fontSize: '13px' }}>
+            ✗ Failed to save. Check your connection and try again.
+          </div>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {editMode && (
@@ -134,7 +162,7 @@ const UserProfile = () => {
                   type="text" 
                   style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--color-bg-elevation-3)', backgroundColor: 'var(--color-bg-base)', color: 'white' }}
                   value={formData.profilePictureUrl || ''} 
-                  onChange={e => setFormData({...formData, profilePictureUrl: e.target.value})}
+                  onChange={e => updateField('profilePictureUrl', e.target.value)}
                   placeholder="Paste direct image URL..."
                 />
                 <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>OR</span>
@@ -152,7 +180,7 @@ const UserProfile = () => {
               <input 
                 style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--color-bg-elevation-3)', backgroundColor: 'var(--color-bg-base)', color: 'white' }}
                 value={formData.programmingLanguages || ''} 
-                onChange={e => setFormData({...formData, programmingLanguages: e.target.value})}
+                onChange={e => updateField('programmingLanguages', e.target.value)}
                 placeholder="e.g. Java, Python, React"
               />
             ) : (
@@ -166,7 +194,7 @@ const UserProfile = () => {
               <input 
                 style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--color-bg-elevation-3)', backgroundColor: 'var(--color-bg-base)', color: 'white' }}
                 value={formData.githubUrl || ''} 
-                onChange={e => setFormData({...formData, githubUrl: e.target.value})}
+                onChange={e => updateField('githubUrl', e.target.value)}
                 placeholder="https://github.com/..."
               />
             ) : (
@@ -180,7 +208,7 @@ const UserProfile = () => {
               <input
                 style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--color-bg-elevation-3)', backgroundColor: 'var(--color-bg-base)', color: 'white' }}
                 value={formData.linkedinUrl || ''}
-                onChange={e => setFormData({...formData, linkedinUrl: e.target.value})}
+                onChange={e => updateField('linkedinUrl', e.target.value)}
                 placeholder="https://linkedin.com/in/..."
               />
             ) : (
@@ -194,7 +222,7 @@ const UserProfile = () => {
               <input
                 style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--color-bg-elevation-3)', backgroundColor: 'var(--color-bg-base)', color: 'white' }}
                 value={formData.portfolioUrl || ''}
-                onChange={e => setFormData({...formData, portfolioUrl: e.target.value})}
+                onChange={e => updateField('portfolioUrl', e.target.value)}
                 placeholder="https://yourportfolio.com"
               />
             ) : (
@@ -208,7 +236,7 @@ const UserProfile = () => {
                <textarea 
                  style={{ width: '100%', minHeight: '80px', padding: '10px', borderRadius: '4px', border: '1px solid var(--color-bg-elevation-3)', backgroundColor: 'var(--color-bg-base)', color: 'white', resize: 'vertical' }}
                  value={formData.bio || ''} 
-                 onChange={e => setFormData({...formData, bio: e.target.value})}
+                 onChange={e => updateField('bio', e.target.value)}
                  placeholder="Tell us about yourself..."
                />
              ) : (
