@@ -1,14 +1,17 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 
 const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { register, login } = useContext(AuthContext);
+  const { register, login, user, loading } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  // If already authenticated, go to main app
+  if (!loading && user) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();

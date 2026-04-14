@@ -31,6 +31,7 @@ export const WebSocketProvider = ({ children }) => {
         },
         onStompError: (frame) => {
           console.error("Broker reported error: " + frame.headers['message']);
+          setConnected(false);
         }
       });
 
@@ -39,7 +40,12 @@ export const WebSocketProvider = ({ children }) => {
 
       return () => {
         client.deactivate();
+        setStompClient(null);
+        setConnected(false);
       };
+    } else {
+      setStompClient(null);
+      setConnected(false);
     }
   }, [token]);
 

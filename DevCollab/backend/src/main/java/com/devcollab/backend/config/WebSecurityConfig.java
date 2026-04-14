@@ -71,7 +71,7 @@ public class WebSecurityConfig {
             "http://localhost:3000"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
+        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token", "accept", "origin", "cache-control"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -85,9 +85,16 @@ public class WebSecurityConfig {
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                     .requestMatchers("/api/test/**").permitAll()
                     .requestMatchers("/ws/**").permitAll() // WebSockets
+                    .requestMatchers("/uploads/**").permitAll() // Static file serving for avatars
+                    // Spring Boot forwards errors to /error internally (DispatcherType.ERROR).
+                    // In a stateless JWT setup the security context is cleared before the error dispatch
+                    // and OncePerRequestFilter skips the JWT re-authentication, so /error would
+                    // be seen as unauthenticated and return 401. Allowing it here prevents
+                    // that false-positive 401 from triggering client-side logout.
+                    .requestMatchers("/error").permitAll()
                     .anyRequest().authenticated()
             );
 

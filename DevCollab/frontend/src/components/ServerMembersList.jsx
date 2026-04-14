@@ -2,8 +2,10 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import axios from 'axios';
 import { WebSocketContext } from '../context/WebSocketContext';
 import { AuthContext } from '../context/AuthContext';
+import { useUserProfile } from '../context/UserProfileContext';
 
 const ServerMembersList = ({ serverId }) => {
+  const { openProfile } = useUserProfile();
   const [members, setMembers] = useState([]);
   const { stompClient, connected } = useContext(WebSocketContext);
   const { user } = useContext(AuthContext);
@@ -56,7 +58,7 @@ const ServerMembersList = ({ serverId }) => {
       </div>
       <div style={{ padding: '0 8px' }}>
         {onlineMembers.map(member => (
-          <MemberItem key={member.id} member={member} isOnline={true} />
+          <MemberItem key={member.id} member={member} isOnline={true} onOpenProfile={() => openProfile(member.user?.id, serverId)} />
         ))}
       </div>
 
@@ -65,16 +67,16 @@ const ServerMembersList = ({ serverId }) => {
       </div>
       <div style={{ padding: '0 8px' }}>
         {offlineMembers.map(member => (
-          <MemberItem key={member.id} member={member} isOnline={false} />
+          <MemberItem key={member.id} member={member} isOnline={false} onOpenProfile={() => openProfile(member.user?.id, serverId)} />
         ))}
       </div>
     </div>
   );
 };
 
-const MemberItem = ({ member, isOnline }) => {
+const MemberItem = ({ member, isOnline, onOpenProfile }) => {
   return (
-    <div style={{
+    <div onClick={onOpenProfile} style={{
       display: 'flex',
       alignItems: 'center',
       padding: '8px',

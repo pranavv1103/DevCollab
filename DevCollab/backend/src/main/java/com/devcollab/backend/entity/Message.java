@@ -19,6 +19,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Message {
 
     @Id
@@ -56,7 +57,7 @@ public class Message {
     @Builder.Default
     private boolean isPinned = false;
     
-    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     private List<Reaction> reactions = new ArrayList<>();
 

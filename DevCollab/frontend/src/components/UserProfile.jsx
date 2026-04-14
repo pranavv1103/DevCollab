@@ -5,7 +5,7 @@ import { Camera, Settings, User } from 'lucide-react';
 import Modal from './Modal';
 
 const UserProfile = () => {
-  const { user } = useContext(AuthContext);
+  const { user, updateUser } = useContext(AuthContext);
   const [profile, setProfile] = useState({});
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({});
@@ -78,9 +78,12 @@ const UserProfile = () => {
     try {
         // Do NOT set Content-Type manually — axios auto-sets multipart/form-data with boundary for FormData
         const res = await axios.post(`http://localhost:9090/api/users/${user.id}/avatar`, formDataUpload);
-        const newUrl = `http://localhost:9090${res.data.message}`;
-        setFormData(prev => ({...prev, profilePictureUrl: newUrl}));
-        setProfile(prev => ({...prev, profilePictureUrl: newUrl}));
+        // Backend returns relative path e.g. /uploads/avatars/user_1_123.jpg
+        const relativePath = res.data.message;
+        setFormData(prev => ({...prev, profilePictureUrl: relativePath}));
+        setProfile(prev => ({...prev, profilePictureUrl: relativePath}));
+        // Keep global auth context in sync so Avatar shows everywhere immediately
+        updateUser({ profilePictureUrl: relativePath });
     } catch (error) {
         console.error("Failed to upload avatar", error);
         alert("Failed to upload avatar image");

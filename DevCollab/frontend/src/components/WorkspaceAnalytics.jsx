@@ -15,11 +15,12 @@ const WorkspaceAnalytics = ({ serverId }) => {
           activeMembers: res.data.memberCount ?? 0,
           totalChannels: res.data.channelCount ?? 0,
           weeklyMessages: res.data.weeklyMessages ?? 0,
+          dailyMessages: res.data.dailyMessages ?? [0,0,0,0,0,0,0],
         });
       })
       .catch(err => {
         console.error('Failed to fetch analytics', err);
-        setStats({ activeMembers: 0, totalChannels: 0, weeklyMessages: 0 });
+        setStats({ activeMembers: 0, totalChannels: 0, weeklyMessages: 0, dailyMessages: [0,0,0,0,0,0,0] });
       })
       .finally(() => setLoading(false));
   }, [serverId]);
@@ -53,17 +54,21 @@ const WorkspaceAnalytics = ({ serverId }) => {
           <BarChart2 size={18} color="var(--color-primary)" />
           <h3 style={{ color: 'white', margin: 0, fontSize: '15px', fontWeight: '700' }}>Activity Chart</h3>
         </div>
-        {/* Simulated sparkline bars proportional to weeklyMessages */}
+        {/* Per-day bar chart from real DB data */}
         <div style={{ height: '120px', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-          {[0.3, 0.5, 0.4, 0.7, 0.6, 0.9, 1.0].map((ratio, i) => {
-            const msgs = stats?.weeklyMessages ?? 100;
-            const h = Math.max(8, ratio * 100);
+          {(stats?.dailyMessages ?? [0,0,0,0,0,0,0]).map((count, i) => {
+            const maxCount = Math.max(...(stats?.dailyMessages ?? [1]), 1);
+            const h = Math.max(4, (count / maxCount) * 100);
             return (
-              <div key={i} style={{
-                flex: 1, backgroundColor: 'var(--color-primary)', height: `${h}%`,
-                borderRadius: '4px 4px 0 0', opacity: 0.75 + ratio * 0.25,
-                transition: 'height 0.8s ease',
-              }} />
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>{count > 0 ? count : ''}</span>
+                <div style={{
+                  width: '100%', backgroundColor: 'var(--color-primary)', height: `${h}%`,
+                  borderRadius: '4px 4px 0 0',
+                  opacity: count === 0 ? 0.2 : 0.75 + (count / maxCount) * 0.25,
+                  transition: 'height 0.8s ease',
+                }} />
+              </div>
             );
           })}
         </div>

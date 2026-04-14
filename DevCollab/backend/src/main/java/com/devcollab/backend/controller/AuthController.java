@@ -19,7 +19,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -85,5 +88,23 @@ public class AuthController {
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<User> userOpt = userRepository.findById(userDetails.getId());
+        if (!userOpt.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        User user = userOpt.get();
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", user.getId());
+        response.put("username", user.getUsername());
+        response.put("email", user.getEmail());
+        response.put("profilePictureUrl", user.getProfilePictureUrl());
+        response.put("bio", user.getBio());
+        response.put("programmingLanguages", user.getProgrammingLanguages());
+        return ResponseEntity.ok(response);
     }
 }

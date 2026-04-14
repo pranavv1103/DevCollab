@@ -20,13 +20,17 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import com.devcollab.backend.entity.Notification;
+import com.devcollab.backend.entity.Reaction;
 import com.devcollab.backend.repository.NotificationRepository;
+import com.devcollab.backend.repository.ReactionRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.transaction.annotation.Transactional;
 
 @Controller
 @SuppressWarnings("null")
@@ -51,9 +55,13 @@ public class ChatController {
     private NotificationRepository notificationRepository;
 
     @Autowired
+    private ReactionRepository reactionRepository;
+
+    @Autowired
     private com.devcollab.backend.repository.ServerMemberRepository serverMemberRepository;
 
     @MessageMapping("/chat.sendMessage/{channelId}")
+    @Transactional
     public void sendMessage(@DestinationVariable Long channelId,
                             @Payload MessageRequest messageRequest,
                             SimpMessageHeaderAccessor headerAccessor) {
@@ -151,6 +159,7 @@ public class ChatController {
     }
 
     @MessageMapping("/chat.editMessage/{channelId}")
+    @Transactional
     public void editMessage(@DestinationVariable Long channelId,
                             @Payload Map<String, Object> payload,
                             SimpMessageHeaderAccessor headerAccessor) {
@@ -180,6 +189,7 @@ public class ChatController {
     }
 
     @MessageMapping("/chat.deleteMessage/{channelId}")
+    @Transactional
     public void deleteMessage(@DestinationVariable Long channelId,
                               @Payload Map<String, Object> payload,
                               SimpMessageHeaderAccessor headerAccessor) {
@@ -205,6 +215,7 @@ public class ChatController {
     }
 
     @MessageMapping("/chat.typing/{channelId}")
+    @Transactional(readOnly = true)
     public void typing(@DestinationVariable Long channelId,
                        @Payload TypingIndicator payload,
                        SimpMessageHeaderAccessor headerAccessor) {
@@ -221,6 +232,7 @@ public class ChatController {
     }
 
     @MessageMapping("/chat.react/{channelId}")
+    @Transactional
     public void reactMessage(@DestinationVariable Long channelId,
                              @Payload Map<String, Object> payload,
                              SimpMessageHeaderAccessor headerAccessor) {
@@ -231,22 +243,43 @@ public class ChatController {
         }
         String username = (String) sessionAttributes.get("username");
         if (username == null) return;
-        
+
         Object msgIdObj = payload.get("messageId");
         if (msgIdObj == null) return;
         Long messageId = Long.valueOf(msgIdObj.toString());
-        
+        String emoji = (String) payload.get("emoji");
+        if (emoji == null || emoji.isBlank()) return;
+
         Optional<Message> msgOpt = messageRepository.findById(messageId);
         if (msgOpt.isPresent()) {
             User user = userRepository.findByUsername(username).orElse(null);
             if (user != null) {
-                // If it exists, toggle it off. Otherwise add it.
-                // For simplicity, we just add it to the reactions array in this demo.
-                // Since this isn't fully built out in repository, we'll just broadcast the UI intent.
-                // E.g. messagingTemplate.convertAndSend("/topic/channels/" + channelId + "/reactions", payload);
-                // A mature system would save `Reaction` entity to `ReactionRepository`.
+                Message message = msgOpt.get();
+                // Toggle: if this user already reacted with the same emoji, remove it; otherwise add it.
+                List<Reaction> existing = reactionRepository.findByMessageId(messageId);
+                java.util.Optional<Reaction> alreadyReacted = existing.stream()
+                    .filter(r -> r.getUser().getId().equals(user.getId()) && r.getEmoji().equals(emoji))
+                    .findFirst();
+
+                if (alreadyReacted.isPresent()) {
+                    reactionRepository.delete(alreadyReacted.get());
+                    payload.put("removed", true);
+                } else {
+                    Reaction reaction = Reaction.builder()
+                        .message(message)
+                        .user(user)
+                        .emoji(emoji)
+                        .build();
+                    reactionRepository.save(reaction);
+                    payload.put("removed", false);
+                }
                 payload.put("username", username);
-                messagingTemplate.convertAndSend("/topic/channels/" + channelId + "/reactions", payload);
+                // Re-fetch full updated reactions list and broadcast
+                List<Reaction> updatedReactions = reactionRepository.findByMessageId(messageId);
+                Map<String, Object> broadcast = new java.util.HashMap<>();
+                broadcast.put("messageId", messageId);
+                broadcast.put("reactions", updatedReactions);
+                messagingTemplate.convertAndSend("/topic/channels/" + channelId + "/reactions", broadcast);
             }
         }
     }

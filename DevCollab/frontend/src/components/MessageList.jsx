@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import axios from 'axios';
 import { WebSocketContext } from '../context/WebSocketContext';
 import { AuthContext } from '../context/AuthContext';
+import { useUserProfile } from '../context/UserProfileContext';
 import ChatInput from './ChatInput';
 import Modal from './Modal';
 import Prism from 'prismjs';
@@ -44,6 +45,7 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
   const [messages, setMessages] = useState([]);
   const { stompClient, connected } = useContext(WebSocketContext);
   const { user } = useContext(AuthContext);
+  const { openProfile } = useUserProfile();
   const messagesEndRef = useRef(null);
   const subscriptionRef = useRef(null);
   const typingSubRef = useRef(null);
@@ -113,7 +115,15 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
         messageIdsRef.current.delete(messageId);
       });
 
-      reactionsSubRef.current = stompClient.subscribe(`/topic/channels/${channelId}/reactions`, () => {});
+      reactionsSubRef.current = stompClient.subscribe(`/topic/channels/${channelId}/reactions`, (output) => {
+        const data = JSON.parse(output.body);
+        // data = { messageId, reactions: [...] }
+        if (data.messageId !== undefined && data.reactions !== undefined) {
+          setMessages(prev => prev.map(m =>
+            m.id === data.messageId ? { ...m, reactions: data.reactions } : m
+          ));
+        }
+      });
     }
 
     return () => {
@@ -197,6 +207,47 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
         console.error('Failed to delete message via HTTP fallback', err);
       }
     }
+  };
+
+  const [savedMessageIds, setSavedMessageIds] = useState(new Set());
+
+  // Load saved message IDs on mount
+  useEffect(() => {
+    axios.get('http://localhost:9090/api/messages/saved')
+      .then(res => {
+        const ids = new Set(res.data.map(sm => sm.message?.id).filter(Boolean));
+        setSavedMessageIds(ids);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveToggle = async (msg) => {
+    const isSaved = savedMessageIds.has(msg.id);
+    try {
+      if (isSaved) {
+        await axios.delete(`http://localhost:9090/api/messages/${msg.id}/save`);
+        setSavedMessageIds(prev => { const n = new Set(prev); n.delete(msg.id); return n; });
+      } else {
+        await axios.post(`http://localhost:9090/api/messages/${msg.id}/save`);
+        setSavedMessageIds(prev => new Set([...prev, msg.id]));
+      }
+    } catch (err) { console.error('Save toggle failed', err); }
+  };
+
+  const handleReact = (messageId, emoji) => {
+    if (connected && stompClient) {
+      stompClient.publish({
+        destination: `/app/chat.react/${channelId}`,
+        body: JSON.stringify({ messageId, emoji }),
+      });
+    }
+  };
+
+  const handlePinToggle = async (msg) => {
+    try {
+      const res = await axios.patch(`http://localhost:9090/api/messages/${msg.id}/pin`);
+      setMessages(prev => prev.map(m => m.id === res.data.id ? { ...m, pinned: res.data.pinned } : m));
+    } catch (err) { console.error('Pin toggle failed', err); }
   };
 
   const handleTyping = (isTyping) => {
@@ -366,15 +417,20 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
 
               {/* Author row */}
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '3px', gap: '7px', flexDirection: isOwn ? 'row-reverse' : 'row' }}>
-                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: isOwn ? 'linear-gradient(135deg, #5865f2, #667eea)' : 'linear-gradient(135deg, #374151, #4b5563)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'white', fontWeight: '700', flexShrink: 0, overflow: 'hidden' }}>
+                <div
+                  onClick={() => msg.user?.id && serverId && openProfile(msg.user.id, serverId, channelId)}
+                  style={{ width: '26px', height: '26px', borderRadius: '50%', background: isOwn ? 'linear-gradient(135deg, #5865f2, #667eea)' : 'linear-gradient(135deg, #374151, #4b5563)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'white', fontWeight: '700', flexShrink: 0, overflow: 'hidden', cursor: 'pointer' }}>
                   {(msg.user?.username || '?').charAt(0).toUpperCase()}
                 </div>
-                <span style={{ fontWeight: '600', fontSize: '13px', color: isOwn ? 'var(--color-primary)' : '#cbd5e1' }}>
+                <span
+                  onClick={() => msg.user?.id && serverId && openProfile(msg.user.id, serverId, channelId)}
+                  style={{ fontWeight: '600', fontSize: '13px', color: isOwn ? 'var(--color-primary)' : '#cbd5e1', cursor: 'pointer' }}
+                >
                   {msg.user?.username}
                 </span>
                 <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {msg.isEdited && <em style={{ opacity: 0.6 }}> · edited</em>}
+                  {msg.edited && <em style={{ opacity: 0.6 }}> · edited</em>}
                 </span>
               </div>
 
@@ -385,8 +441,11 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
                 borderRadius: isOwn ? '14px 4px 14px 14px' : '4px 14px 14px 14px',
                 maxWidth: '72%',
                 position: 'relative',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                boxShadow: msg.pinned ? '0 0 0 2px rgba(167,139,250,0.5), 0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.2)',
               }}>
+                {msg.pinned && (
+                  <div style={{ fontSize: '10px', color: '#a78bfa', marginBottom: '5px', fontWeight: '600', opacity: 0.8 }}>📌 Pinned</div>
+                )}
                 {msg.content && <p style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: '14px', lineHeight: '1.55', wordBreak: 'break-word' }}>{msg.content}</p>}
 
                 {hasCode && (
@@ -425,7 +484,74 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
                 <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-text-muted)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px' }} onClick={() => { setReplyTo(msg); setEditingMessage(null); }}>↩ Reply</button>
                 {isOwn && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-text-muted)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px' }} onClick={() => { setEditingMessage(msg); setReplyTo(null); }}>✏ Edit</button>}
                 {isOwn && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-danger)', border: '1px solid rgba(237,66,69,0.3)', borderRadius: '6px' }} onClick={() => handleDeleteMessage(msg.id)}>Delete</button>}
+                <button
+                  className="btn-icon"
+                  title={savedMessageIds.has(msg.id) ? 'Unsave message' : 'Save message'}
+                  onClick={() => handleSaveToggle(msg)}
+                  style={{
+                    fontSize: '12px', padding: '3px 8px',
+                    color: savedMessageIds.has(msg.id) ? '#f59e0b' : 'var(--color-text-muted)',
+                    border: `1px solid ${savedMessageIds.has(msg.id) ? 'rgba(245,158,11,0.4)' : 'var(--color-bg-elevation-3)'}`,
+                    borderRadius: '6px',
+                  }}
+                >🔖 {savedMessageIds.has(msg.id) ? 'Saved' : 'Save'}</button>
+                {(userRole === 'OWNER' || userRole === 'ADMIN') && (
+                  <button
+                    className="btn-icon"
+                    title={msg.pinned ? 'Unpin message' : 'Pin message'}
+                    onClick={() => handlePinToggle(msg)}
+                    style={{
+                      fontSize: '12px', padding: '3px 8px',
+                      color: msg.pinned ? '#a78bfa' : 'var(--color-text-muted)',
+                      border: `1px solid ${msg.pinned ? 'rgba(167,139,250,0.4)' : 'var(--color-bg-elevation-3)'}`,
+                      borderRadius: '6px',
+                    }}
+                  >📌 {msg.pinned ? 'Unpin' : 'Pin'}</button>
+                )}
+                {/* Quick emoji reactions */}
+                {['👍','❤️','😂','🎉','🚀','👀'].map(emoji => (
+                  <button
+                    key={emoji}
+                    className="btn-icon"
+                    title={`React with ${emoji}`}
+                    onClick={() => handleReact(msg.id, emoji)}
+                    style={{ fontSize: '12px', padding: '2px 6px', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px', lineHeight: 1 }}
+                  >{emoji}</button>
+                ))}
               </div>
+
+              {/* Reaction display */}
+              {msg.reactions && msg.reactions.length > 0 && (() => {
+                const grouped = msg.reactions.reduce((acc, r) => {
+                  const key = r.emoji;
+                  if (!acc[key]) acc[key] = { emoji: key, count: 0, users: [] };
+                  acc[key].count++;
+                  if (r.user?.username) acc[key].users.push(r.user.username);
+                  return acc;
+                }, {});
+                return (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px', marginLeft: isOwn ? 0 : '36px', justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
+                    {Object.values(grouped).map(g => (
+                      <button
+                        key={g.emoji}
+                        onClick={() => handleReact(msg.id, g.emoji)}
+                        title={g.users.join(', ')}
+                        style={{
+                          fontSize: '12px', padding: '2px 8px', borderRadius: '12px',
+                          border: g.users.includes(user?.username)
+                            ? '1px solid var(--color-primary)' : '1px solid var(--color-bg-elevation-3)',
+                          backgroundColor: g.users.includes(user?.username)
+                            ? 'rgba(88,101,242,0.15)' : 'var(--color-bg-elevation-2)',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                          color: 'var(--color-text-base)',
+                        }}
+                      >
+                        {g.emoji} <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{g.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

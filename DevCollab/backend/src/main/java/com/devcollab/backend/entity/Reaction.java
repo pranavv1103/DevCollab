@@ -20,10 +20,15 @@ public class Reaction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "message_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Message message;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("messageId")
+    public Long getMessageId() { return message != null ? message.getId() : null; }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "email", "ownedServers", "role", "status", "lastSeen", "programmingLanguages", "bio", "githubUrl", "linkedinUrl", "portfolioUrl", "themePreference"})
     private User user;
 
     @Column(nullable = false)

@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { WebSocketProvider } from './context/WebSocketContext';
+import { UserProfileProvider } from './context/UserProfileContext';
+import UserProfileModal from './components/UserProfileModal';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import MainLayout from './components/MainLayout';
@@ -24,24 +26,27 @@ const PrivateRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <WebSocketProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/" element={
-              <PrivateRoute>
-                <MainLayout />
-              </PrivateRoute>
-            }>
-              <Route path="servers/:serverId/channels/:channelId" element={<ServerView />} />
-              <Route path="servers/:serverId" element={<ServerView />} />
-              <Route index element={<ServerView />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </WebSocketProvider>
+      <UserProfileProvider>
+        <WebSocketProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/" element={
+                <PrivateRoute>
+                  <MainLayout />
+                </PrivateRoute>
+              }>
+                <Route path="servers/:serverId/channels/:channelId" element={<ServerView />} />
+                <Route path="servers/:serverId" element={<ServerView />} />
+                <Route index element={<ServerView />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+            <UserProfileModal />
+          </Router>
+        </WebSocketProvider>
+      </UserProfileProvider>
     </AuthProvider>
   );
 }

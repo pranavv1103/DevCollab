@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import Modal from './Modal';
 import GlobalSearch from './GlobalSearch';
 import NotificationsPanel from './NotificationsPanel';
+import SavedMessages from './SavedMessages';
 import axios from 'axios';
 
 const MainLayout = () => {
@@ -19,6 +20,7 @@ const MainLayout = () => {
   const [inviteCode, setInviteCode] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isSavedMessagesOpen, setIsSavedMessagesOpen] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [serverError, setServerError] = useState('');
   const [joinError, setJoinError] = useState('');
@@ -118,6 +120,7 @@ const MainLayout = () => {
         onOpenSearch={() => setIsSearchOpen(true)}
         onToggleNotifications={() => setIsNotificationsOpen(prev => !prev)}
         hasUnreadNotifications={hasUnreadNotifications}
+        onToggleSavedMessages={() => setIsSavedMessagesOpen(prev => !prev)}
       />
 
       {isNotificationsOpen && (
@@ -129,6 +132,16 @@ const MainLayout = () => {
       )}
       {isSearchOpen && (
         <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      )}
+      {isSavedMessagesOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: '72px', bottom: 0, width: '420px',
+          backgroundColor: 'var(--color-bg-base)', zIndex: 100,
+          boxShadow: '4px 0 24px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column',
+          borderRight: '1px solid var(--color-bg-elevation-2)',
+        }}>
+          <SavedMessages onClose={() => setIsSavedMessagesOpen(false)} />
+        </div>
       )}
 
       <main style={{ flex: 1, display: 'flex', minWidth: 0, overflow: 'hidden' }}>

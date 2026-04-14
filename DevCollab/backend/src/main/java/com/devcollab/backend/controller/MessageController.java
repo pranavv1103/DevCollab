@@ -9,7 +9,11 @@ import com.devcollab.backend.entity.User;
 import com.devcollab.backend.repository.ChannelRepository;
 import com.devcollab.backend.repository.CodeSnippetRepository;
 import com.devcollab.backend.repository.MessageRepository;
+import com.devcollab.backend.repository.SavedMessageRepository;
 import com.devcollab.backend.repository.UserRepository;
+import com.devcollab.backend.entity.SavedMessage;
+import com.devcollab.backend.entity.ServerRole;
+import com.devcollab.backend.repository.ServerMemberRepository;
 import com.devcollab.backend.security.services.UserDetailsImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -41,7 +45,10 @@ public class MessageController {
     CodeSnippetRepository codeSnippetRepository;
 
     @Autowired
-    com.devcollab.backend.repository.ServerMemberRepository serverMemberRepository;
+    SavedMessageRepository savedMessageRepository;
+
+    @Autowired
+    ServerMemberRepository serverMemberRepository;
 
     @GetMapping("/channels/{channelId}/messages")
     public ResponseEntity<?> getMessagesByChannel(
@@ -63,7 +70,8 @@ public class MessageController {
         }
         
         com.devcollab.backend.entity.ServerMember member = memberOpt.get();
-        if (channel.isPrivate() && !(String.valueOf(member.getRole()).equals("OWNER") || String.valueOf(member.getRole()).equals("ADMIN"))) {
+        ServerRole viewerRole = member.getRole();
+        if (channel.isPrivate() && viewerRole != ServerRole.OWNER && viewerRole != ServerRole.ADMIN) {
             return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized to view private channel messages"));
         }
 
@@ -88,7 +96,8 @@ public class MessageController {
         }
         
         com.devcollab.backend.entity.ServerMember member = memberOpt.get();
-        if (channel.isPrivate() && !(String.valueOf(member.getRole()).equals("OWNER") || String.valueOf(member.getRole()).equals("ADMIN"))) {
+        ServerRole senderRole = member.getRole();
+        if (channel.isPrivate() && senderRole != ServerRole.OWNER && senderRole != ServerRole.ADMIN) {
             return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized to send messages in private channel"));
         }
 
@@ -165,5 +174,76 @@ public class MessageController {
     public ResponseEntity<List<Message>> searchMessages(@RequestParam String keyword) {
         List<Message> results = messageRepository.searchByKeyword(keyword);
         return ResponseEntity.ok(results);
+    }
+
+    // ── Saved Messages ────────────────────────────────────────────────────────
+
+    @GetMapping("/messages/saved")
+    public ResponseEntity<?> getSavedMessages() {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        List<com.devcollab.backend.entity.SavedMessage> saved = savedMessageRepository.findByUserIdOrderBySavedAtDesc(userDetails.getId());
+        return ResponseEntity.ok(saved);
+    }
+
+    @PostMapping("/messages/{messageId}/save")
+    public ResponseEntity<?> saveMessage(@PathVariable Long messageId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<Message> msgOpt = messageRepository.findById(messageId);
+        if (!msgOpt.isPresent()) return ResponseEntity.notFound().build();
+
+        // Already saved? return 200 with existing
+        Optional<SavedMessage> existing = savedMessageRepository.findByUserIdAndMessageId(userDetails.getId(), messageId);
+        if (existing.isPresent()) return ResponseEntity.ok(existing.get());
+
+        User user = userRepository.findById(userDetails.getId()).orElse(null);
+        if (user == null) return ResponseEntity.status(403).build();
+
+        SavedMessage sm = SavedMessage.builder()
+            .user(user)
+            .message(msgOpt.get())
+            .build();
+        savedMessageRepository.save(sm);
+        return ResponseEntity.ok(sm);
+    }
+
+    @DeleteMapping("/messages/{messageId}/save")
+    public ResponseEntity<?> unsaveMessage(@PathVariable Long messageId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<SavedMessage> existing = savedMessageRepository.findByUserIdAndMessageId(userDetails.getId(), messageId);
+        if (!existing.isPresent()) return ResponseEntity.notFound().build();
+        savedMessageRepository.delete(existing.get());
+        return ResponseEntity.ok(new MessageResponse("Message unsaved"));
+    }
+
+    // ── Message Pinning ───────────────────────────────────────────────────────
+
+    @GetMapping("/channels/{channelId}/pinned")
+    public ResponseEntity<?> getPinnedMessages(@PathVariable Long channelId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<Channel> channelOpt = channelRepository.findById(channelId);
+        if (!channelOpt.isPresent()) return ResponseEntity.notFound().build();
+        Long serverId = channelOpt.get().getServer().getId();
+        Optional<com.devcollab.backend.entity.ServerMember> pinnedMemberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+        if (!pinnedMemberOpt.isPresent()) return ResponseEntity.status(403).body(new MessageResponse("Error: Not a member"));
+        List<Message> pinned = messageRepository.findByChannelIdAndIsPinnedTrue(channelId);
+        return ResponseEntity.ok(pinned);
+    }
+
+    @PatchMapping("/messages/{messageId}/pin")
+    public ResponseEntity<?> togglePinMessage(@PathVariable Long messageId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<Message> msgOpt = messageRepository.findById(messageId);
+        if (!msgOpt.isPresent()) return ResponseEntity.notFound().build();
+        Message msg = msgOpt.get();
+        Long serverId = msg.getChannel().getServer().getId();
+        Optional<com.devcollab.backend.entity.ServerMember> pinMemberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+        if (!pinMemberOpt.isPresent()) return ResponseEntity.status(403).body(new MessageResponse("Error: Not a member"));
+        ServerRole role = pinMemberOpt.get().getRole();
+        if (role != ServerRole.OWNER && role != ServerRole.ADMIN) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Only OWNER or ADMIN can pin messages"));
+        }
+        msg.setPinned(!msg.isPinned());
+        msg = messageRepository.save(msg);
+        return ResponseEntity.ok(msg);
     }
 }

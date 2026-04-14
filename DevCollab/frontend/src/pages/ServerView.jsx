@@ -89,7 +89,7 @@ const ServerView = () => {
   const handleDeleteChannel = async (cId) => {
     if (!window.confirm('Delete this channel? All messages will be lost.')) return;
     try {
-      await axios.delete(`http://localhost:9090/api/channels/${cId}`);
+      await axios.delete(`http://localhost:9090/api/servers/${serverId}/channels/${cId}`);
       const updated = channels.filter(c => c.id !== cId);
       setChannels(updated);
       if (parseInt(channelId) === cId) {
@@ -106,7 +106,7 @@ const ServerView = () => {
     try {
       await axios.delete(`http://localhost:9090/api/servers/${serverId}/leave`);
       navigate('/', { replace: true });
-      if (outletCtx.onServerLeft) outletCtx.onServerLeft(parseInt(serverId));
+      if (outletCtx.onServerDeleted) outletCtx.onServerDeleted(parseInt(serverId));
     } catch (err) {
       console.error('Failed to leave server', err);
     }
@@ -117,7 +117,7 @@ const ServerView = () => {
     try {
       await axios.delete(`http://localhost:9090/api/servers/${serverId}`);
       navigate('/', { replace: true });
-      if (outletCtx.onServerLeft) outletCtx.onServerLeft(parseInt(serverId));
+      if (outletCtx.onServerDeleted) outletCtx.onServerDeleted(parseInt(serverId));
     } catch (err) {
       console.error('Failed to delete server', err);
     }

@@ -1,0 +1,20 @@
+# Java build artifacts
+DevCollab/backend/build/
+DevCollab/backend/.gradle/
+DevCollab/backend/bin/
+*.class
+*.jar
+
+# Node
+DevCollab/frontend/node_modules/
+DevCollab/frontend/dist/
+
+# OS
+.DS_Store
+
+# Logs
+DevCollab/logfile
+*.log
+
+# Postgres data dir
+DevCollab/data/
