@@ -98,7 +98,9 @@ public class ChatController {
             }
             Message parentMessage = null;
             if (messageRequest.getParentMessageId() != null) {
-                parentMessage = messageRepository.findById(messageRequest.getParentMessageId()).orElse(null);
+                // Use JOIN FETCH so parentMessage.user is eagerly loaded and available
+                // during Jackson/STOMP serialization (avoids LazyInitializationException)
+                parentMessage = messageRepository.findByIdWithRelations(messageRequest.getParentMessageId()).orElse(null);
             }
 
             Message message = Message.builder()
@@ -119,6 +121,8 @@ public class ChatController {
             }
 
             Message savedMessage = messageRepository.save(message);
+            // Reload with relations so STOMP broadcast JSON is fully populated
+            Message toSend = messageRepository.findByIdWithRelations(savedMessage.getId()).orElse(savedMessage);
 
             // Generate reply notification
             if (parentMessage != null && !parentMessage.getUser().getId().equals(sender.getId())) {
@@ -154,7 +158,7 @@ public class ChatController {
             }
 
             // Broadcast the saved message uniquely to that channel subscriber topic
-            messagingTemplate.convertAndSend("/topic/channels/" + channelId, savedMessage);
+            messagingTemplate.convertAndSend("/topic/channels/" + channelId, toSend);
         }
     }
 
