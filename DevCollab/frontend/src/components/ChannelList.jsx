@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Hash, Plus, Copy, Trash2, Lock, LogOut } from 'lucide-react';
+import { Hash, Plus, Copy, Trash2, Lock, LogOut, Megaphone } from 'lucide-react';
 import UserProfile from './UserProfile';
 import { AuthContext } from '../context/AuthContext';
 
@@ -73,6 +73,17 @@ const ChannelList = ({ channels, activeChannelId, serverId, server, userRole, on
             </button>
             <span id="invite-copy-feedback" style={{ position: 'absolute', right: '32px', fontSize: '11px', color: 'var(--color-success)', opacity: 0, transition: 'opacity 0.3s', pointerEvents: 'none' }}>Copied!</span>
           </div>
+          {userRole && (
+            <div style={{ marginTop: '8px' }}>
+              <span style={{
+                fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.07em',
+                padding: '2px 8px', borderRadius: '10px',
+                backgroundColor: userRole === 'OWNER' ? 'rgba(245,158,11,0.15)' : userRole === 'ADMIN' ? 'rgba(88,101,242,0.15)' : userRole === 'VIEWER' ? 'rgba(100,116,139,0.15)' : 'rgba(71,85,105,0.15)',
+                color: userRole === 'OWNER' ? '#f59e0b' : userRole === 'ADMIN' ? 'var(--color-primary)' : userRole === 'VIEWER' ? '#94a3b8' : '#64748b',
+                border: `1px solid ${userRole === 'OWNER' ? 'rgba(245,158,11,0.3)' : userRole === 'ADMIN' ? 'rgba(88,101,242,0.3)' : 'rgba(100,116,139,0.2)'}`,
+              }}>{userRole}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -128,7 +139,9 @@ const ChannelList = ({ channels, activeChannelId, serverId, server, userRole, on
                   onMouseOver={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#d1d3d9'; }}
                   onMouseOut={e => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)'; } }}
                 >
-                  {channel.private || channel.isPrivate ? (
+                  {channel.channelType === 'ANNOUNCEMENT' ? (
+                    <Megaphone size={15} style={{ marginRight: '7px', flexShrink: 0 }} />
+                  ) : channel.channelType === 'PRIVATE' || channel.private || channel.isPrivate ? (
                     <Lock size={15} style={{ marginRight: '7px', flexShrink: 0 }} />
                   ) : (
                     <Hash size={15} style={{ marginRight: '7px', flexShrink: 0 }} />

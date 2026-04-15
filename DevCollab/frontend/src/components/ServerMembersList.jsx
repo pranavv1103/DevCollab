@@ -115,6 +115,12 @@ const MemberItem = ({ member, isOnline, onOpenProfile }) => {
 
       <div style={{ marginLeft: '12px', display: 'flex', flexDirection: 'column' }}>
         <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{member.user?.username}</span>
+        {member.role && (
+          <span style={{
+            fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em',
+            color: member.role === 'OWNER' ? '#f59e0b' : member.role === 'ADMIN' ? 'var(--color-primary)' : member.role === 'VIEWER' ? '#94a3b8' : '#64748b',
+          }}>{member.role}</span>
+        )}
       </div>
     </div>
   );

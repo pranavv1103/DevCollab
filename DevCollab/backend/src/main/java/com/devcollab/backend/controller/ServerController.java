@@ -105,7 +105,7 @@ public class ServerController {
         com.devcollab.backend.entity.Channel general = com.devcollab.backend.entity.Channel.builder()
                 .name("general")
                 .type("text")
-                .isPrivate(false)
+                .channelType(com.devcollab.backend.entity.ChannelType.PUBLIC)
                 .server(savedServer)
                 .build();
         channelRepository.save(general);
@@ -187,11 +187,12 @@ public class ServerController {
     public ResponseEntity<?> updateServer(@PathVariable Long serverId, @RequestBody Server updateRequest) {
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Optional<ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
-        
-        if (!memberOpt.isPresent() || (memberOpt.get().getRole() != ServerRole.OWNER && memberOpt.get().getRole() != ServerRole.ADMIN)) {
-            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized to update server settings"));
+
+        // Only OWNER can update server-level settings (name, description, icon)
+        if (!memberOpt.isPresent() || memberOpt.get().getRole() != ServerRole.OWNER) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Only the server owner can update server settings"));
         }
-        
+
         Optional<Server> serverOpt = serverRepository.findById(serverId);
         if (serverOpt.isPresent()) {
             Server server = serverOpt.get();
@@ -315,11 +316,12 @@ public class ServerController {
                 && viewerRole == ServerRole.OWNER
                 && targetMember.getRole() != ServerRole.OWNER;
 
-        // canKick: OWNER can kick anyone except self;
-        //          ADMIN can kick MEMBER-role users only.
+        // canKick: OWNER can kick anyone except self and another OWNER;
+        //          ADMIN can kick MEMBER and VIEWER only.
         boolean canKick = !isSelf && (
-                viewerRole == ServerRole.OWNER
-                || (viewerRole == ServerRole.ADMIN && targetMember.getRole() == ServerRole.MEMBER)
+                viewerRole == ServerRole.OWNER && targetMember.getRole() != ServerRole.OWNER
+                || (viewerRole == ServerRole.ADMIN
+                    && (targetMember.getRole() == ServerRole.MEMBER || targetMember.getRole() == ServerRole.VIEWER))
         );
 
         // ── Stats ─────────────────────────────────────────────────────────────
@@ -415,7 +417,7 @@ public class ServerController {
         try {
             newRole = ServerRole.valueOf(newRoleStr.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid role. Use ADMIN or MEMBER"));
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid role. Use ADMIN, MEMBER, or VIEWER"));
         }
 
         if (newRole == ServerRole.OWNER) {
@@ -471,7 +473,8 @@ public class ServerController {
         ServerMember targetMember = targetMemberOpt.get();
 
         boolean allowed = viewerRole == ServerRole.OWNER
-                || (viewerRole == ServerRole.ADMIN && targetMember.getRole() == ServerRole.MEMBER);
+                || (viewerRole == ServerRole.ADMIN
+                    && (targetMember.getRole() == ServerRole.MEMBER || targetMember.getRole() == ServerRole.VIEWER));
 
         if (!allowed) {
             return ResponseEntity.status(403).body(new MessageResponse("Error: Insufficient permissions to kick this member"));
@@ -490,6 +493,85 @@ public class ServerController {
                 .build());
         }
         return ResponseEntity.ok(new MessageResponse("Member removed from server"));
+    }
+
+    // ── Transfer Ownership ─────────────────────────────────────────────────────
+
+    /**
+     * POST /api/servers/{serverId}/transfer-ownership
+     * Body: { "userId": <targetUserId> }
+     * Only the current OWNER can transfer ownership.
+     * The current owner is demoted to ADMIN after the transfer.
+     */
+    @PostMapping("/{serverId}/transfer-ownership")
+    @Transactional
+    public ResponseEntity<?> transferOwnership(
+            @PathVariable Long serverId,
+            @RequestBody Map<String, Object> body) {
+
+        UserDetailsImpl viewerDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long viewerId = viewerDetails.getId();
+
+        Optional<ServerMember> ownerMemberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, viewerId);
+        if (!ownerMemberOpt.isPresent() || ownerMemberOpt.get().getRole() != ServerRole.OWNER) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Only the server OWNER can transfer ownership"));
+        }
+
+        Object targetIdObj = body.get("userId");
+        if (targetIdObj == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: 'userId' field is required"));
+        }
+        Long targetUserId;
+        try {
+            targetUserId = Long.valueOf(targetIdObj.toString());
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid userId"));
+        }
+
+        if (viewerId.equals(targetUserId)) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Cannot transfer ownership to yourself"));
+        }
+
+        Optional<ServerMember> targetMemberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, targetUserId);
+        if (!targetMemberOpt.isPresent()) {
+            return ResponseEntity.status(404).body(new MessageResponse("Error: Target user is not a member of this server"));
+        }
+
+        ServerMember ownerMember = ownerMemberOpt.get();
+        ServerMember targetMember = targetMemberOpt.get();
+
+        // Transfer: new owner ← OWNER, old owner ← ADMIN
+        targetMember.setRole(ServerRole.OWNER);
+        ownerMember.setRole(ServerRole.ADMIN);
+        serverMemberRepository.save(targetMember);
+        serverMemberRepository.save(ownerMember);
+
+        // Update the server's owner field
+        Optional<Server> serverOpt = serverRepository.findById(serverId);
+        if (serverOpt.isPresent()) {
+            Server server = serverOpt.get();
+            User newOwnerUser = userRepository.findById(targetUserId).orElse(null);
+            if (newOwnerUser != null) {
+                server.setOwner(newOwnerUser);
+                serverRepository.save(server);
+            }
+        }
+
+        User viewerUser = userRepository.findById(viewerId).orElse(null);
+        User targetUser = userRepository.findById(targetUserId).orElse(null);
+        Server server = serverRepository.findById(serverId).orElse(null);
+        if (server != null && viewerUser != null && targetUser != null) {
+            serverAuditLogRepository.save(ServerAuditLog.builder()
+                .server(server).actor(viewerUser)
+                .actionType("OWNERSHIP_TRANSFER")
+                .actionDetails(viewerUser.getUsername() + " transferred ownership to " + targetUser.getUsername())
+                .build());
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("newOwnerUserId", targetUserId);
+        result.put("message", "Ownership transferred successfully");
+        return ResponseEntity.ok(result);
     }
 
     // ── Audit Log ──────────────────────────────────────────────────────────────

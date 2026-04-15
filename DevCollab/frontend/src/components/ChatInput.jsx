@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Code, X, Edit2 } from 'lucide-react';
 
-const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, onCancelEdit }) => {
+const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, onCancelEdit, readOnly }) => {
   const [text, setText] = useState('');
   const [codeMode, setCodeMode] = useState(false);
   const [codeSnippet, setCodeSnippet] = useState('');
@@ -63,6 +63,24 @@ const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, o
   const isEditing = !!editingMessage;
   const isReplying = !!replyTo && !isEditing;
   const canSend = text.trim().length > 0 || (codeMode && codeSnippet.trim().length > 0);
+
+  if (readOnly) {
+    return (
+      <div style={{
+        backgroundColor: 'var(--color-bg-elevation-2)',
+        borderRadius: '12px',
+        border: '1px solid var(--color-bg-elevation-3)',
+        padding: '12px 16px',
+        color: 'var(--color-text-muted)',
+        fontSize: '14px',
+        fontStyle: 'italic',
+        opacity: 0.7,
+        userSelect: 'none',
+      }}>
+        You cannot send messages in this channel.
+      </div>
+    );
+  }
 
   return (
     <div style={{

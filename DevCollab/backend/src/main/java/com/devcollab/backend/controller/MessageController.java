@@ -15,6 +15,7 @@ import com.devcollab.backend.entity.SavedMessage;
 import com.devcollab.backend.entity.ServerRole;
 import com.devcollab.backend.repository.ServerMemberRepository;
 import com.devcollab.backend.security.services.UserDetailsImpl;
+import com.devcollab.backend.service.PermissionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -50,29 +51,32 @@ public class MessageController {
     @Autowired
     ServerMemberRepository serverMemberRepository;
 
+    @Autowired
+    PermissionService permissionService;
+
     @GetMapping("/channels/{channelId}/messages")
     public ResponseEntity<?> getMessagesByChannel(
             @PathVariable Long channelId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        
+
         Optional<Channel> channelOpt = channelRepository.findById(channelId);
         if (!channelOpt.isPresent()) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Channel not found"));
         }
-        
+
         Channel channel = channelOpt.get();
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Optional<com.devcollab.backend.entity.ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), userDetails.getId());
-        
+        Optional<com.devcollab.backend.entity.ServerMember> memberOpt =
+                serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), userDetails.getId());
+
         if (!memberOpt.isPresent()) {
             return ResponseEntity.status(403).body(new MessageResponse("Error: Not a member of this server"));
         }
-        
-        com.devcollab.backend.entity.ServerMember member = memberOpt.get();
-        ServerRole viewerRole = member.getRole();
-        if (channel.isPrivate() && viewerRole != ServerRole.OWNER && viewerRole != ServerRole.ADMIN) {
-            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized to view private channel messages"));
+
+        ServerRole viewerRole = memberOpt.get().getRole();
+        if (!permissionService.canReadChannel(viewerRole, channel)) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized to view this channel"));
         }
 
         Page<Message> messages = messageRepository.findByChannelIdOrderByTimestampDesc(channelId, PageRequest.of(page, size));
@@ -82,27 +86,26 @@ public class MessageController {
     @PostMapping("/channels/{channelId}/messages")
     public ResponseEntity<?> sendMessage(@PathVariable Long channelId, @RequestBody MessageRequest request) {
         Optional<Channel> channelOpt = channelRepository.findById(channelId);
-        
+
         if (!channelOpt.isPresent()) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Channel not found"));
         }
-        
+
         Channel channel = channelOpt.get();
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Optional<com.devcollab.backend.entity.ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), userDetails.getId());
-        
+        Optional<com.devcollab.backend.entity.ServerMember> memberOpt =
+                serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), userDetails.getId());
+
         if (!memberOpt.isPresent()) {
             return ResponseEntity.status(403).body(new MessageResponse("Error: Not a member of this server"));
         }
-        
-        com.devcollab.backend.entity.ServerMember member = memberOpt.get();
-        ServerRole senderRole = member.getRole();
-        if (channel.isPrivate() && senderRole != ServerRole.OWNER && senderRole != ServerRole.ADMIN) {
-            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized to send messages in private channel"));
+
+        ServerRole senderRole = memberOpt.get().getRole();
+        if (!permissionService.canSendMessage(senderRole, channel)) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: You do not have permission to send messages in this channel"));
         }
 
         User sender = userRepository.findById(userDetails.getId()).orElse(null);
-
         if (sender == null) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: User not found"));
         }
@@ -131,7 +134,6 @@ public class MessageController {
         }
 
         Message savedMessage = messageRepository.save(message);
-
         return ResponseEntity.ok(savedMessage);
     }
 
@@ -143,8 +145,9 @@ public class MessageController {
             return ResponseEntity.notFound().build();
         }
         Message msg = msgOpt.get();
-        if (!msg.getUser().getId().equals(userDetails.getId())) {
-            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized"));
+        // Only the author can edit their message
+        if (!permissionService.canEditMessage(userDetails.getId(), msg.getUser().getId())) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Only the message author can edit it"));
         }
         String newContent = body.get("content");
         if (newContent != null) {
@@ -163,9 +166,17 @@ public class MessageController {
             return ResponseEntity.notFound().build();
         }
         Message msg = msgOpt.get();
-        if (!msg.getUser().getId().equals(userDetails.getId())) {
-            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized"));
+
+        // Determine actor's server role for moderation
+        Long serverId = msg.getChannel().getServer().getId();
+        Optional<com.devcollab.backend.entity.ServerMember> memberOpt =
+                serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+        ServerRole actorRole = memberOpt.map(m -> m.getRole()).orElse(null);
+
+        if (actorRole == null || !permissionService.canDeleteMessage(actorRole, userDetails.getId(), msg.getUser().getId())) {
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Unauthorized to delete this message"));
         }
+
         messageRepository.delete(msg);
         return ResponseEntity.ok(new MessageResponse("Message deleted"));
     }

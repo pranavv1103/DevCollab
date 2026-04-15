@@ -5,10 +5,12 @@ import com.devcollab.backend.dto.request.TypingIndicator;
 import com.devcollab.backend.entity.Channel;
 import com.devcollab.backend.entity.CodeSnippet;
 import com.devcollab.backend.entity.Message;
+import com.devcollab.backend.entity.ServerRole;
 import com.devcollab.backend.entity.User;
 import com.devcollab.backend.repository.ChannelRepository;
 import com.devcollab.backend.repository.MessageRepository;
 import com.devcollab.backend.repository.UserRepository;
+import com.devcollab.backend.service.PermissionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +62,9 @@ public class ChatController {
     @Autowired
     private com.devcollab.backend.repository.ServerMemberRepository serverMemberRepository;
 
+    @Autowired
+    private PermissionService permissionService;
+
     @MessageMapping("/chat.sendMessage/{channelId}")
     @Transactional
     public void sendMessage(@DestinationVariable Long channelId,
@@ -87,13 +92,13 @@ public class ChatController {
         if (sender != null && channel != null) {
             java.util.Optional<com.devcollab.backend.entity.ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), sender.getId());
             if (!memberOpt.isPresent()) {
-                logger.error("Forbidden STOMP access: Non-member attempting to send message");
+                logger.error("Forbidden STOMP: non-member attempted to send to channel {}", channelId);
                 return;
             }
-            
-            com.devcollab.backend.entity.ServerMember member = memberOpt.get();
-            if (channel.isPrivate() && !(String.valueOf(member.getRole()).equals("OWNER") || String.valueOf(member.getRole()).equals("ADMIN"))) {
-                logger.error("Forbidden STOMP access: Unauthorized send to private channel");
+
+            ServerRole senderRole = memberOpt.get().getRole();
+            if (!permissionService.canSendMessage(senderRole, channel)) {
+                logger.warn("Forbidden STOMP: role {} cannot send to channel {} (type={})", senderRole, channelId, channel.getChannelType());
                 return;
             }
             Message parentMessage = null;
@@ -291,9 +296,17 @@ public class ChatController {
         Optional<Message> msgOpt = messageRepository.findById(messageId);
         if (msgOpt.isPresent()) {
             Message msg = msgOpt.get();
-            if (msg.getUser().getUsername().equals(username)) {
+            User actor = userRepository.findByUsername(username).orElse(null);
+            if (actor == null) return;
+            // Determine the actor's server role for moderation purposes
+            java.util.Optional<com.devcollab.backend.entity.ServerMember> actorMember =
+                serverMemberRepository.findByServerIdAndUserId(msg.getChannel().getServer().getId(), actor.getId());
+            ServerRole actorRole = actorMember.map(m -> m.getRole()).orElse(null);
+            if (actorRole != null && permissionService.canDeleteMessage(actorRole, actor.getId(), msg.getUser().getId())) {
                 messageRepository.delete(msg);
                 messagingTemplate.convertAndSend("/topic/channels/" + channelId + "/deletes", Map.of("messageId", messageId));
+            } else {
+                logger.warn("Forbidden STOMP delete: {} tried to delete message {}", username, messageId);
             }
         }
     }

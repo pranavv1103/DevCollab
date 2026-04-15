@@ -41,7 +41,7 @@ const renderMarkdown = (text) => {
   });
 };
 
-const MessageList = ({ channelId, channelName, userRole, serverId }) => {
+const MessageList = ({ channelId, channelName, channelType, userRole, serverId }) => {
   const [messages, setMessages] = useState([]);
   const { stompClient, connected } = useContext(WebSocketContext);
   const { user } = useContext(AuthContext);
@@ -307,6 +307,11 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
     setExplainModal({ isOpen: true, code: '', language: 'javascript' });
   };
 
+  const canSendInChannel = userRole !== 'VIEWER' &&
+    !(channelType === 'ANNOUNCEMENT' && (userRole === 'MEMBER' || !userRole));
+
+  const canModerate = userRole === 'OWNER' || userRole === 'ADMIN';
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg-base)', overflow: 'hidden' }}>
       {/* Header */}
@@ -316,7 +321,7 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
         backgroundColor: 'var(--color-bg-elevation-1)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: 'var(--color-text-muted)', fontWeight: '800', fontSize: '20px' }}>#</span>
+          <span style={{ color: 'var(--color-text-muted)', fontWeight: '800', fontSize: '20px' }}>{channelType === 'ANNOUNCEMENT' ? '📣' : '#'}</span>
           <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: 'white' }}>{channelName || `channel-${channelId}`}</h3>
           {!connected && (
             <span style={{ fontSize: '11px', backgroundColor: 'rgba(237,66,69,0.2)', color: 'var(--color-danger)', padding: '2px 8px', borderRadius: '10px', fontWeight: '600' }}>
@@ -483,7 +488,7 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
               <div className="message-actions" style={{ display: 'flex', gap: '3px', marginTop: '3px', flexDirection: isOwn ? 'row-reverse' : 'row' }}>
                 <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-text-muted)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px' }} onClick={() => { setReplyTo(msg); setEditingMessage(null); }}>↩ Reply</button>
                 {isOwn && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-text-muted)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px' }} onClick={() => { setEditingMessage(msg); setReplyTo(null); }}>✏ Edit</button>}
-                {isOwn && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-danger)', border: '1px solid rgba(237,66,69,0.3)', borderRadius: '6px' }} onClick={() => handleDeleteMessage(msg.id)}>Delete</button>}
+                {(isOwn || canModerate) && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-danger)', border: '1px solid rgba(237,66,69,0.3)', borderRadius: '6px' }} onClick={() => handleDeleteMessage(msg.id)}>Delete</button>}
                 <button
                   className="btn-icon"
                   title={savedMessageIds.has(msg.id) ? 'Unsave message' : 'Save message'}
@@ -573,6 +578,7 @@ const MessageList = ({ channelId, channelName, userRole, serverId }) => {
           onCancelReply={() => setReplyTo(null)}
           editingMessage={editingMessage}
           onCancelEdit={() => setEditingMessage(null)}
+          readOnly={!canSendInChannel}
         />
       </div>
 

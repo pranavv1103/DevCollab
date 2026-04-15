@@ -25,13 +25,45 @@ public class Channel {
     @Column(nullable = false)
     private String name;
 
+    /**
+     * Legacy free-text type field kept for backward compatibility.
+     * Use {@link #channelType} for all permission logic.
+     */
     @Column(nullable = false)
-    private String type; // e.g., "text", "announcement", "private"
-    
+    private String type; // "text" etc.
+
     private String description;
-    
+
+    /**
+     * Canonical channel permission model.
+     * Stored as a VARCHAR so Postgres auto-migrates via ddl-auto=update.
+     * Defaults to PUBLIC.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "channel_type", nullable = false)
     @Builder.Default
-    private boolean isPrivate = false;
+    private ChannelType channelType = ChannelType.PUBLIC;
+
+    /**
+     * Derived convenience accessor — true when channelType == PRIVATE.
+     * Kept for backward compat with existing code that checks isPrivate().
+     */
+    public boolean isPrivate() {
+        return channelType == ChannelType.PRIVATE;
+    }
+
+    /**
+     * Setter kept for Spring / Lombok interop. Prefer setting channelType directly.
+     * Setting isPrivate=true switches channelType to PRIVATE; false → PUBLIC unless
+     * already ANNOUNCEMENT (in which case it is left unchanged).
+     */
+    public void setPrivate(boolean p) {
+        if (p) {
+            this.channelType = ChannelType.PRIVATE;
+        } else if (this.channelType == ChannelType.PRIVATE) {
+            this.channelType = ChannelType.PUBLIC;
+        }
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "server_id", nullable = false)

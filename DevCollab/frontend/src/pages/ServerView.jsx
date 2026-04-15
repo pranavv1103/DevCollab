@@ -16,10 +16,10 @@ const ServerView = () => {
 
   const [channels, setChannels] = useState([]);
   const [activeServer, setActiveServer] = useState(null);
-  const [userRole, setUserRole] = useState(null); // 'OWNER' | 'ADMIN' | 'MEMBER' | null
+  const [userRole, setUserRole] = useState(null); // 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER' | null
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
-  const [isPrivateChannel, setIsPrivateChannel] = useState(false);
+  const [newChannelType, setNewChannelType] = useState('PUBLIC'); // 'PUBLIC' | 'PRIVATE' | 'ANNOUNCEMENT'
   const [channelError, setChannelError] = useState('');
 
   useEffect(() => {
@@ -63,7 +63,7 @@ const ServerView = () => {
 
   const openCreateModal = () => {
     setNewChannelName('');
-    setIsPrivateChannel(false);
+    setNewChannelType('PUBLIC');
     setChannelError('');
     setIsModalOpen(true);
   };
@@ -76,7 +76,7 @@ const ServerView = () => {
       const res = await axios.post(`http://localhost:9090/api/servers/${serverId}/channels`, {
         name: newChannelName.toLowerCase().replace(/\s+/g, '-'),
         type: 'text',
-        private: isPrivateChannel,
+        channelType: newChannelType,
       });
       await fetchChannels();
       setIsModalOpen(false);
@@ -152,6 +152,7 @@ const ServerView = () => {
         <MessageList
           channelId={channelId}
           channelName={channels.find(c => c.id === parseInt(channelId))?.name || `channel-${channelId}`}
+          channelType={channels.find(c => c.id === parseInt(channelId))?.channelType || 'PUBLIC'}
           userRole={userRole}
           serverId={serverId}
         />
@@ -163,7 +164,7 @@ const ServerView = () => {
 
       <ServerMembersList serverId={serverId} />
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Text Channel">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Channel">
         <form onSubmit={handleCreateChannel} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {channelError && (
             <div style={{ backgroundColor: 'rgba(237,66,69,0.15)', border: '1px solid var(--color-danger)', color: 'var(--color-danger)', padding: '10px 14px', borderRadius: '6px', fontSize: '14px' }}>
@@ -183,17 +184,37 @@ const ServerView = () => {
               />
             </div>
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={isPrivateChannel}
-              onChange={e => setIsPrivateChannel(e.target.checked)}
-              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-            />
-            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
-              <strong style={{ color: 'var(--color-text-base)' }}>Private Channel</strong> — Only visible to server admins and the owner
-            </span>
-          </label>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--color-text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Channel Type</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                { value: 'PUBLIC', label: 'Public', icon: '#', desc: 'All members can read and write' },
+                { value: 'ANNOUNCEMENT', label: 'Announcement', icon: '📣', desc: 'All members can read; only OWNER/ADMIN can post' },
+                { value: 'PRIVATE', label: 'Private', icon: '🔒', desc: 'Only OWNER and ADMIN can access' },
+              ].map(opt => (
+                <label key={opt.value} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer',
+                  padding: '10px 12px', borderRadius: '6px',
+                  border: `1px solid ${newChannelType === opt.value ? 'var(--color-primary)' : 'var(--color-bg-elevation-3)'}`,
+                  backgroundColor: newChannelType === opt.value ? 'rgba(88,101,242,0.1)' : 'var(--color-bg-elevation-1)',
+                  transition: 'all 0.15s',
+                }}>
+                  <input
+                    type="radio"
+                    name="channelType"
+                    value={opt.value}
+                    checked={newChannelType === opt.value}
+                    onChange={() => setNewChannelType(opt.value)}
+                    style={{ marginTop: '2px', accentColor: 'var(--color-primary)' }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: 'white' }}>{opt.icon} {opt.label}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{opt.desc}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
             <button type="button" onClick={() => setIsModalOpen(false)}
               style={{ padding: '8px 16px', background: 'var(--color-bg-elevation-3)', color: 'var(--color-text-base)', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
