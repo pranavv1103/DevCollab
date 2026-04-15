@@ -127,41 +127,69 @@ public class ChatController {
             // Using a Map with explicitly-set values is always safe.
             Map<String, Object> broadcastPayload = buildBroadcastPayload(savedMessage, sender, parentMessage);
 
-            // Generate reply notification
-            if (parentMessage != null && !parentMessage.getUser().getId().equals(sender.getId())) {
-                Notification replyNotif = Notification.builder()
-                    .user(parentMessage.getUser())
-                    .type("REPLY")
-                    .content(sender.getUsername() + " replied to your message in #" + channel.getName())
-                    .relatedEntityId(channel.getId())
-                    .createdAt(LocalDateTime.now())
-                    .build();
-                notificationRepository.save(replyNotif);
-                messagingTemplate.convertAndSend("/topic/user/" + parentMessage.getUser().getId() + "/notifications", replyNotif);
+            // Broadcast FIRST — before any notification work that could throw.
+            // This guarantees the sender always sees their own message regardless of
+            // notification failures.
+            messagingTemplate.convertAndSend("/topic/channels/" + channelId, broadcastPayload);
+
+            // Generate reply notification — wrapped in try-catch so failures never
+            // roll back the message save or suppress the already-sent broadcast.
+            try {
+                if (parentMessage != null && !parentMessage.getUser().getId().equals(sender.getId())) {
+                    Long parentUserId = parentMessage.getUser().getId();
+                    Notification replyNotif = Notification.builder()
+                        .type("REPLY")
+                        .content(sender.getUsername() + " replied to your message in #" + channel.getName())
+                        .relatedEntityId(channel.getId())
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                    // Set user by ID reference to avoid any proxy/cascade issues
+                    User parentAuthor = userRepository.findById(parentUserId).orElse(null);
+                    if (parentAuthor != null) {
+                        replyNotif.setUser(parentAuthor);
+                        notificationRepository.save(replyNotif);
+                        Map<String, Object> notifPayload = new java.util.LinkedHashMap<>();
+                        notifPayload.put("id", replyNotif.getId());
+                        notifPayload.put("type", replyNotif.getType());
+                        notifPayload.put("content", replyNotif.getContent());
+                        notifPayload.put("relatedEntityId", replyNotif.getRelatedEntityId());
+                        notifPayload.put("read", false);
+                        messagingTemplate.convertAndSend("/topic/user/" + parentUserId + "/notifications", notifPayload);
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Failed to create reply notification (message was still saved and broadcast)", e);
             }
 
             // Parse mentions and create notifications
-            if (savedMessage.getContent() != null && !savedMessage.getContent().isEmpty()) {
-                Matcher matcher = MENTION_PATTERN.matcher(savedMessage.getContent());
-                while (matcher.find()) {
-                    String mentionedUsername = matcher.group(1);
-                    User mentionedUser = userRepository.findByUsername(mentionedUsername).orElse(null);
-                    if (mentionedUser != null && !mentionedUser.getId().equals(sender.getId())) {
-                        Notification mentionNotif = Notification.builder()
-                            .user(mentionedUser)
-                            .type("MENTION")
-                            .content("You were mentioned in #" + channel.getName() + " by " + sender.getUsername())
-                            .relatedEntityId(channel.getId())
-                            .createdAt(LocalDateTime.now())
-                            .build();
-                        notificationRepository.save(mentionNotif);
-                        messagingTemplate.convertAndSend("/topic/user/" + mentionedUser.getId() + "/notifications", mentionNotif);
+            try {
+                if (savedMessage.getContent() != null && !savedMessage.getContent().isEmpty()) {
+                    Matcher matcher = MENTION_PATTERN.matcher(savedMessage.getContent());
+                    while (matcher.find()) {
+                        String mentionedUsername = matcher.group(1);
+                        User mentionedUser = userRepository.findByUsername(mentionedUsername).orElse(null);
+                        if (mentionedUser != null && !mentionedUser.getId().equals(sender.getId())) {
+                            Notification mentionNotif = Notification.builder()
+                                .user(mentionedUser)
+                                .type("MENTION")
+                                .content("You were mentioned in #" + channel.getName() + " by " + sender.getUsername())
+                                .relatedEntityId(channel.getId())
+                                .createdAt(LocalDateTime.now())
+                                .build();
+                            notificationRepository.save(mentionNotif);
+                            Map<String, Object> notifPayload = new java.util.LinkedHashMap<>();
+                            notifPayload.put("id", mentionNotif.getId());
+                            notifPayload.put("type", mentionNotif.getType());
+                            notifPayload.put("content", mentionNotif.getContent());
+                            notifPayload.put("relatedEntityId", mentionNotif.getRelatedEntityId());
+                            notifPayload.put("read", false);
+                            messagingTemplate.convertAndSend("/topic/user/" + mentionedUser.getId() + "/notifications", notifPayload);
+                        }
                     }
                 }
+            } catch (Exception e) {
+                logger.error("Failed to create mention notification (message was still saved and broadcast)", e);
             }
-
-            // Broadcast the saved message uniquely to that channel subscriber topic
-            messagingTemplate.convertAndSend("/topic/channels/" + channelId, broadcastPayload);
         }
     }
 
