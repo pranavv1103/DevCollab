@@ -98,9 +98,8 @@ public class ChatController {
             }
             Message parentMessage = null;
             if (messageRequest.getParentMessageId() != null) {
-                // Use JOIN FETCH so parentMessage.user is eagerly loaded and available
-                // during Jackson/STOMP serialization (avoids LazyInitializationException)
-                parentMessage = messageRepository.findByIdWithRelations(messageRequest.getParentMessageId()).orElse(null);
+                // Use JOIN FETCH to eagerly load the parent's user (needed for broadcast payload)
+                parentMessage = messageRepository.findByIdWithUser(messageRequest.getParentMessageId()).orElse(null);
             }
 
             Message message = Message.builder()
@@ -121,8 +120,12 @@ public class ChatController {
             }
 
             Message savedMessage = messageRepository.save(message);
-            // Reload with relations so STOMP broadcast JSON is fully populated
-            Message toSend = messageRepository.findByIdWithRelations(savedMessage.getId()).orElse(savedMessage);
+
+            // Build a plain Map payload for STOMP broadcast.
+            // Broadcasting a Hibernate entity directly risks LazyInitializationException
+            // if Jackson accesses un-initialized proxies after the session closes.
+            // Using a Map with explicitly-set values is always safe.
+            Map<String, Object> broadcastPayload = buildBroadcastPayload(savedMessage, sender, parentMessage);
 
             // Generate reply notification
             if (parentMessage != null && !parentMessage.getUser().getId().equals(sender.getId())) {
@@ -158,8 +161,57 @@ public class ChatController {
             }
 
             // Broadcast the saved message uniquely to that channel subscriber topic
-            messagingTemplate.convertAndSend("/topic/channels/" + channelId, toSend);
+            messagingTemplate.convertAndSend("/topic/channels/" + channelId, broadcastPayload);
         }
+    }
+
+    /**
+     * Builds a plain Map from a saved Message for STOMP broadcast.
+     * Using a Map avoids Hibernate lazy-proxy serialization issues — all values
+     * are read within the active transaction and stored as plain Java types.
+     */
+    private Map<String, Object> buildBroadcastPayload(Message msg, User sender, Message parentMessage) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("id", msg.getId());
+        m.put("content", msg.getContent());
+        m.put("timestamp", msg.getTimestamp() != null ? msg.getTimestamp().toString() : null);
+        m.put("edited", false);
+        m.put("pinned", false);
+
+        // sender is already fully loaded — no proxy risk
+        Map<String, Object> u = new java.util.LinkedHashMap<>();
+        u.put("id", sender.getId());
+        u.put("username", sender.getUsername());
+        u.put("profilePictureUrl", sender.getProfilePictureUrl());
+        m.put("user", u);
+
+        // parentMessage was loaded via findByIdWithUser → its user is eagerly fetched
+        if (parentMessage != null && parentMessage.getUser() != null) {
+            Map<String, Object> pm = new java.util.LinkedHashMap<>();
+            pm.put("id", parentMessage.getId());
+            pm.put("content", parentMessage.getContent());
+            Map<String, Object> pu = new java.util.LinkedHashMap<>();
+            pu.put("id", parentMessage.getUser().getId());
+            pu.put("username", parentMessage.getUser().getUsername());
+            pu.put("profilePictureUrl", parentMessage.getUser().getProfilePictureUrl());
+            pm.put("user", pu);
+            m.put("parentMessage", pm);
+        } else {
+            m.put("parentMessage", null);
+        }
+
+        // snippet was cascaded with the save, so msg.getSnippet() is the object we just set
+        if (msg.getSnippet() != null) {
+            Map<String, Object> sn = new java.util.LinkedHashMap<>();
+            sn.put("codeContent", msg.getSnippet().getCodeContent());
+            sn.put("language", msg.getSnippet().getLanguage());
+            m.put("snippet", sn);
+        } else {
+            m.put("snippet", null);
+        }
+
+        m.put("reactions", java.util.Collections.emptyList());
+        return m;
     }
 
     @MessageMapping("/chat.editMessage/{channelId}")

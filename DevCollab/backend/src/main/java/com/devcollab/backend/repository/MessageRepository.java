@@ -58,8 +58,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Query("SELECT m FROM Message m WHERE m.channel.id = :channelId AND m.isPinned = true ORDER BY m.timestamp DESC")
     List<Message> findByChannelIdAndIsPinnedTrue(@Param("channelId") Long channelId);
 
-    /** Load a message together with its user and (if present) the parent message's user in one query.
-     *  Used before STOMP broadcast to avoid LazyInitializationException on parentMessage.user. */
-    @Query("SELECT m FROM Message m JOIN FETCH m.user LEFT JOIN FETCH m.parentMessage pm LEFT JOIN FETCH pm.user WHERE m.id = :id")
-    java.util.Optional<Message> findByIdWithRelations(@Param("id") Long id);
+    /** Load a message with its user eagerly — used to avoid LazyInitializationException. */
+    @Query("SELECT m FROM Message m JOIN FETCH m.user WHERE m.id = :id")
+    java.util.Optional<Message> findByIdWithUser(@Param("id") Long id);
 }
