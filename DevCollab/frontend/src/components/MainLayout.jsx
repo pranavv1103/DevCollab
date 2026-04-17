@@ -6,6 +6,7 @@ import Modal from './Modal';
 import GlobalSearch from './GlobalSearch';
 import NotificationsPanel from './NotificationsPanel';
 import SavedMessages from './SavedMessages';
+import DMView from './DMView';
 import axios from 'axios';
 
 const MainLayout = () => {
@@ -21,6 +22,8 @@ const MainLayout = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSavedMessagesOpen, setIsSavedMessagesOpen] = useState(false);
+  const [isDMsOpen, setIsDMsOpen] = useState(false);
+  const [dmUnread, setDmUnread] = useState(0);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [serverError, setServerError] = useState('');
   const [joinError, setJoinError] = useState('');
@@ -122,6 +125,8 @@ const MainLayout = () => {
         onToggleNotifications={() => setIsNotificationsOpen(prev => !prev)}
         hasUnreadNotifications={hasUnreadNotifications}
         onToggleSavedMessages={() => setIsSavedMessagesOpen(prev => !prev)}
+        onToggleDMs={() => setIsDMsOpen(prev => !prev)}
+        dmUnread={dmUnread}
       />
 
       {isNotificationsOpen && (
@@ -134,6 +139,10 @@ const MainLayout = () => {
       {isSearchOpen && (
         <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       )}
+      {isDMsOpen && (
+        <DMView onClose={() => setIsDMsOpen(false)} onUnreadChange={setDmUnread} />
+      )}
+
       {isSavedMessagesOpen && (
         <div style={{
           position: 'fixed', top: 0, left: '72px', bottom: 0, width: '420px',

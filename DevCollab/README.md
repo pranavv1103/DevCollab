@@ -95,6 +95,14 @@ The project was built end-to-end: custom JWT authentication, a Spring WebSocket 
 - Output (stdout) displayed inline below the code block; errors shown in orange
 - Dismiss the output panel with ×
 
+**Direct Messages (DMs)**
+- Private one-on-one messaging between any two users
+- Access via the 💬 icon in the sidebar; shows unread badge
+- Search any registered user to start a conversation
+- Real-time message delivery via WebSocket (`/topic/dm/{userId}`)
+- Unread count badge per conversation; auto-marked read on open
+- REST API: `GET /api/dm/{userId}` (history), `POST /api/dm/{userId}/read`, `GET /api/dm/inbox`, `GET /api/dm/users/search`
+
 **Role-Based Access Control (RBAC)**
 - 3-tier server roles: OWNER, ADMIN, MEMBER
 - Enforced across all controllers and the WebSocket interceptor
