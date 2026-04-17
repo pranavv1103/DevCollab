@@ -119,6 +119,13 @@ The project was built end-to-end: custom JWT authentication, a Spring WebSocket 
 - MEMBER: read and message channels they have access to
 - `canKick`, `canChangeRole`, `isSelf` flags computed server-side per profile fetch
 
+**Rate Limiting (bucket4j)**
+- Token-bucket algorithm via [bucket4j-core](https://github.com/bucket4j/bucket4j) — no Redis required
+- Upload endpoints (`/api/upload/**`): 10 requests/minute per user/IP
+- All other API mutations (`POST`, `PUT`, `PATCH` on `/api/**`): 60 requests/minute per user/IP
+- Exceeded limit returns HTTP 429 with `Retry-After: 60` header and JSON error body
+- Keyed by authenticated username when available; falls back to `X-Forwarded-For` then remote IP
+
 **User Profiles**
 - Edit bio, programming languages, GitHub, LinkedIn, portfolio URL, theme preference
 - Avatar upload (multipart, up to 10 MB) — saved to `/uploads/avatars/`, served as static files
