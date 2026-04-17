@@ -35,6 +35,9 @@ public class WebSecurityConfig {
     @Autowired
     private AuthEntryPointJwt unauthorizedHandler;
 
+    @Autowired
+    private OAuth2SuccessHandler oAuth2SuccessHandler;
+
     @Bean
     public JwtAuthenticationFilter authenticationJwtTokenFilter() {
         return new JwtAuthenticationFilter();
@@ -83,7 +86,7 @@ public class WebSecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                     .requestMatchers("/api/test/**").permitAll()
@@ -98,6 +101,10 @@ public class WebSecurityConfig {
                     .requestMatchers("/error").permitAll()
                     .anyRequest().authenticated()
             );
+
+        http.oauth2Login(oauth2 -> oauth2
+                .successHandler(oAuth2SuccessHandler)
+        );
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);

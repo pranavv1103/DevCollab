@@ -6,6 +6,7 @@ import { UserProfileProvider } from './context/UserProfileContext';
 import UserProfileModal from './components/UserProfileModal';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import OAuth2Callback from './pages/OAuth2Callback';
 import MainLayout from './components/MainLayout';
 import ServerView from './pages/ServerView';
 
@@ -32,6 +33,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/oauth2/callback" element={<OAuth2Callback />} />
               <Route path="/" element={
                 <PrivateRoute>
                   <MainLayout />

@@ -134,6 +134,15 @@ The project was built end-to-end: custom JWT authentication, a Spring WebSocket 
 - Frontend: click the GitHub (🐙) icon in the sidebar to open the **GitHub Events** live feed panel
 - Shows repo name, pusher/author, commit message for pushes; PR title & action for PRs; issue title for issues
 
+**OAuth Login (GitHub)**
+- Click "Sign in with GitHub" on the login page to authenticate via GitHub OAuth2
+- Backend: Spring Security OAuth2 client; callback at `GET /login/oauth2/code/github`
+- On first login, a new DevCollab account is auto-created using GitHub username + email + avatar
+- On re-login, existing account is matched by email or username — no duplicate users created
+- After OAuth callback, a JWT is issued and the browser is redirected to `/oauth2/callback?token=...`
+- React stores the JWT and fetches the full user profile, identical to normal password login
+- Configure with env vars: `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (from GitHub OAuth App settings)
+
 **User Profiles**
 - Edit bio, programming languages, GitHub, LinkedIn, portfolio URL, theme preference
 - Avatar upload (multipart, up to 10 MB) — saved to `/uploads/avatars/`, served as static files

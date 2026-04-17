@@ -41,6 +41,9 @@ dependencies {
     // Rate limiting
     implementation 'com.bucket4j:bucket4j-core:8.10.1'
 
+    // OAuth2 login (GitHub)
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
 }

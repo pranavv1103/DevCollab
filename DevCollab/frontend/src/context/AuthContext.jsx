@@ -178,8 +178,15 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const loginWithToken = (jwt) => {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${jwt}`;
+    localStorage.setItem('token', jwt);
+    setToken(jwt);
+    // user will be fetched by the useEffect([token]) block
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, register, loading, updateUser }}>
+    <AuthContext.Provider value={{ user, token, login, loginWithToken, logout, register, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
