@@ -88,6 +88,13 @@ The project was built end-to-end: custom JWT authentication, a Spring WebSocket 
 - Poll creators, OWNER, and ADMIN roles can delete polls
 - REST API: `GET/POST /api/channels/{channelId}/polls`, `POST /api/polls/{id}/vote`, `DELETE /api/polls/{id}`
 
+**Code Execution (Piston API)**
+- Every code snippet in chat has a ▶ Run button in its toolbar
+- Executes code remotely via the [Piston API](https://github.com/engineer-man/piston) — no backend changes needed
+- Supported languages: JavaScript, Python, Java, C, C++, Go, Rust, Ruby, TypeScript, Bash
+- Output (stdout) displayed inline below the code block; errors shown in orange
+- Dismiss the output panel with ×
+
 **Role-Based Access Control (RBAC)**
 - 3-tier server roles: OWNER, ADMIN, MEMBER
 - Enforced across all controllers and the WebSocket interceptor

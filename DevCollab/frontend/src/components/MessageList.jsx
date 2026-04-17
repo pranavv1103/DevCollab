@@ -63,6 +63,8 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
   const [editingMessage, setEditingMessage] = useState(null);
   // Explain code inline modal
   const [explainModal, setExplainModal] = useState({ isOpen: false, code: '', language: 'javascript' });
+  // Code execution via Piston API
+  const [runResults, setRunResults] = useState({}); // { [msgId]: { running, stdout, stderr } }
 
   // Close AI menu on outside click
   useEffect(() => {
@@ -308,6 +310,55 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
     setExplainModal({ isOpen: true, code: '', language: 'javascript' });
   };
 
+  const PISTON_LANG_MAP = {
+    javascript: { language: 'javascript', version: '18.15.0' },
+    js:         { language: 'javascript', version: '18.15.0' },
+    python:     { language: 'python',     version: '3.10.0'  },
+    py:         { language: 'python',     version: '3.10.0'  },
+    java:       { language: 'java',       version: '15.0.2'  },
+    c:          { language: 'c',          version: '10.2.0'  },
+    cpp:        { language: 'c++',        version: '10.2.0'  },
+    'c++':      { language: 'c++',        version: '10.2.0'  },
+    go:         { language: 'go',         version: '1.16.2'  },
+    rust:       { language: 'rust',       version: '1.50.0'  },
+    ruby:       { language: 'ruby',       version: '3.0.1'   },
+    bash:       { language: 'bash',       version: '5.1.0'   },
+    sh:         { language: 'bash',       version: '5.1.0'   },
+    ts:         { language: 'typescript', version: '4.2.3'   },
+    typescript: { language: 'typescript', version: '4.2.3'   },
+  };
+
+  const runCode = async (msgId, code, lang) => {
+    const mapped = PISTON_LANG_MAP[(lang || '').toLowerCase()];
+    if (!mapped) {
+      setRunResults(prev => ({ ...prev, [msgId]: { running: false, stdout: '', stderr: `Language "${lang || 'unknown'}" is not supported for execution.` } }));
+      return;
+    }
+    setRunResults(prev => ({ ...prev, [msgId]: { running: true, stdout: '', stderr: '' } }));
+    try {
+      const res = await fetch('https://emkc.org/api/v2/piston/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: mapped.language,
+          version: mapped.version,
+          files: [{ content: code }],
+        }),
+      });
+      const data = await res.json();
+      setRunResults(prev => ({
+        ...prev,
+        [msgId]: {
+          running: false,
+          stdout: data.run?.stdout ?? '',
+          stderr: data.run?.stderr ?? (data.message || ''),
+        },
+      }));
+    } catch {
+      setRunResults(prev => ({ ...prev, [msgId]: { running: false, stdout: '', stderr: 'Failed to reach execution service.' } }));
+    }
+  };
+
   const canSendInChannel = userRole !== 'VIEWER' &&
     !(channelType === 'ANNOUNCEMENT' && (userRole === 'MEMBER' || !userRole));
 
@@ -470,6 +521,7 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
                         { label: 'Explain', icon: <Brain size={12} />, fn: () => handleAiAction('explain', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language }) },
                         { label: 'Suggest', icon: <Sparkles size={12} />, fn: () => handleAiAction('suggest', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language }) },
                         { label: 'Review', icon: <Code size={12} />, fn: () => handleAiAction('code-review', { codeSnippet: msg.snippet.codeContent, language: msg.snippet.language }) },
+                        { label: runResults[msg.id]?.running ? 'Running…' : '▶ Run', icon: null, fn: () => runCode(msg.id, msg.snippet.codeContent, msg.snippet.language) },
                       ].map((btn, bi) => (
                         <React.Fragment key={btn.label}>
                           {bi > 0 && <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.06)' }} />}
@@ -481,6 +533,23 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
                         </React.Fragment>
                       ))}
                     </div>
+                    {runResults[msg.id] && !runResults[msg.id].running && (runResults[msg.id].stdout || runResults[msg.id].stderr) && (
+                      <div style={{ backgroundColor: '#0d1117', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 14px', position: 'relative' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '10px', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Output</span>
+                          <button onClick={() => setRunResults(prev => { const n = { ...prev }; delete n[msg.id]; return n; })} style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: '12px', padding: '0 2px', lineHeight: 1 }}>×</button>
+                        </div>
+                        {runResults[msg.id].stdout && (
+                          <pre style={{ margin: 0, fontSize: '12px', lineHeight: '1.55', color: '#c9d1d9', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '180px', overflowY: 'auto' }}>{runResults[msg.id].stdout}</pre>
+                        )}
+                        {runResults[msg.id].stderr && (
+                          <pre style={{ margin: runResults[msg.id].stdout ? '6px 0 0' : 0, fontSize: '12px', lineHeight: '1.55', color: '#f97316', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '120px', overflowY: 'auto' }}>{runResults[msg.id].stderr}</pre>
+                        )}
+                      </div>
+                    )}
+                    {runResults[msg.id]?.running && (
+                      <div style={{ backgroundColor: '#0d1117', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 14px', fontSize: '12px', color: '#8b949e', fontStyle: 'italic' }}>Running…</div>
+                    )}
                   </div>
                 )}
               </div>
