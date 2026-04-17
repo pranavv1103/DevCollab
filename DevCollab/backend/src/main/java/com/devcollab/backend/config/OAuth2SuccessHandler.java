@@ -69,7 +69,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                         .githubUrl("https://github.com/" + (login != null ? login : ""))
                         .status(UserStatus.ONLINE)
                         .build();
-                return userRepository.save(newUser);
+                @SuppressWarnings("null")
+                User created = userRepository.save(newUser);
+                return created;
             });
         });
 

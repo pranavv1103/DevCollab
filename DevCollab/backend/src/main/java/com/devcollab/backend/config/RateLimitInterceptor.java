@@ -2,7 +2,6 @@ package com.devcollab.backend.config;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
@@ -23,14 +22,14 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private Bucket uploadBucketFor(String key) {
         return uploadBuckets.computeIfAbsent(key, k ->
                 Bucket.builder()
-                        .addLimit(Bandwidth.classic(10, Refill.greedy(10, Duration.ofMinutes(1))))
+                        .addLimit(Bandwidth.builder().capacity(10).refillGreedy(10, Duration.ofMinutes(1)).build())
                         .build());
     }
 
     private Bucket apiBucketFor(String key) {
         return apiBuckets.computeIfAbsent(key, k ->
                 Bucket.builder()
-                        .addLimit(Bandwidth.classic(60, Refill.greedy(60, Duration.ofMinutes(1))))
+                        .addLimit(Bandwidth.builder().capacity(60).refillGreedy(60, Duration.ofMinutes(1)).build())
                         .build());
     }
 

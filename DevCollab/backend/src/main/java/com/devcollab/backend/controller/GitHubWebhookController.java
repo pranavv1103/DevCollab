@@ -37,6 +37,7 @@ public class GitHubWebhookController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @SuppressWarnings("null")
     @PostMapping("/github")
     public ResponseEntity<Void> handleGitHubEvent(
             @RequestHeader(value = "X-GitHub-Event", defaultValue = "ping") String event,
@@ -58,7 +59,7 @@ public class GitHubWebhookController {
 
         Map<String, Object> payload = buildPayload(event, rawBody);
         // Broadcast to all connected clients on /topic/github
-        messagingTemplate.convertAndSend("/topic/github", payload);
+        messagingTemplate.convertAndSend("/topic/github", (Object) payload);
         logger.info("GitHub {} event broadcast to /topic/github", event);
 
         return ResponseEntity.ok().build();
