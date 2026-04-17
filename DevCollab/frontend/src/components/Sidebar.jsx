@@ -1,9 +1,9 @@
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, LogOut, Code2, Compass, Search, Bell, Bookmark, MessageSquare } from 'lucide-react';
+import { Plus, LogOut, Code2, Compass, Search, Bell, Bookmark, MessageSquare, Github } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 
-const Sidebar = ({ servers, activeServerId, onCreateServer, onJoinServer, onLogout, onOpenSearch, onToggleNotifications, hasUnreadNotifications, onToggleSavedMessages, onToggleDMs, dmUnread }) => {
+const Sidebar = ({ servers, activeServerId, onCreateServer, onJoinServer, onLogout, onOpenSearch, onToggleNotifications, hasUnreadNotifications, onToggleSavedMessages, onToggleDMs, dmUnread, onToggleGitHub }) => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
@@ -147,6 +147,7 @@ const Sidebar = ({ servers, activeServerId, onCreateServer, onJoinServer, onLogo
       <div style={{ paddingBottom: '16px', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center', borderTop: '1px solid var(--color-bg-elevation-3)', width: '100%' }}>
         <SidebarIcon onClick={onOpenSearch} icon={<Search size={20} />} title="Global Search" />
         <SidebarIcon onClick={onToggleSavedMessages} icon={<Bookmark size={20} />} title="Saved Messages" />
+        <SidebarIcon onClick={onToggleGitHub} icon={<Github size={20} />} title="GitHub Events" />
         <SidebarIcon
           onClick={onToggleDMs}
           title="Direct Messages"

@@ -7,6 +7,7 @@ import GlobalSearch from './GlobalSearch';
 import NotificationsPanel from './NotificationsPanel';
 import SavedMessages from './SavedMessages';
 import DMView from './DMView';
+import GitHubEventsPanel from './GitHubEventsPanel';
 import axios from 'axios';
 
 const MainLayout = () => {
@@ -24,6 +25,7 @@ const MainLayout = () => {
   const [isSavedMessagesOpen, setIsSavedMessagesOpen] = useState(false);
   const [isDMsOpen, setIsDMsOpen] = useState(false);
   const [dmUnread, setDmUnread] = useState(0);
+  const [isGitHubOpen, setIsGitHubOpen] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [serverError, setServerError] = useState('');
   const [joinError, setJoinError] = useState('');
@@ -127,6 +129,7 @@ const MainLayout = () => {
         onToggleSavedMessages={() => setIsSavedMessagesOpen(prev => !prev)}
         onToggleDMs={() => setIsDMsOpen(prev => !prev)}
         dmUnread={dmUnread}
+        onToggleGitHub={() => setIsGitHubOpen(prev => !prev)}
       />
 
       {isNotificationsOpen && (
@@ -141,6 +144,9 @@ const MainLayout = () => {
       )}
       {isDMsOpen && (
         <DMView onClose={() => setIsDMsOpen(false)} onUnreadChange={setDmUnread} />
+      )}
+      {isGitHubOpen && (
+        <GitHubEventsPanel onClose={() => setIsGitHubOpen(false)} />
       )}
 
       {isSavedMessagesOpen && (

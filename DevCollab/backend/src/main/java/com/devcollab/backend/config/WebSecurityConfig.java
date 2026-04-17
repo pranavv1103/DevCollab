@@ -89,6 +89,7 @@ public class WebSecurityConfig {
                     .requestMatchers("/api/test/**").permitAll()
                     .requestMatchers("/ws/**").permitAll() // WebSockets
                     .requestMatchers("/uploads/**").permitAll() // Static file serving for avatars
+                    .requestMatchers("/api/webhooks/**").permitAll() // GitHub webhooks (verified via HMAC)
                     // Spring Boot forwards errors to /error internally (DispatcherType.ERROR).
                     // In a stateless JWT setup the security context is cleared before the error dispatch
                     // and OncePerRequestFilter skips the JWT re-authentication, so /error would

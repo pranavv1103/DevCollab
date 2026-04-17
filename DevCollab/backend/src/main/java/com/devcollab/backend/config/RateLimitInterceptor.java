@@ -44,6 +44,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         // Only rate-limit POST/PUT/PATCH mutations
         if ("GET".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method)) return true;
 
+        // Exclude webhook endpoint (verified separately via HMAC)
+        if (path.startsWith("/api/webhooks/")) return true;
+
         String clientKey = getClientKey(request);
 
         Bucket bucket;

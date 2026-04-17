@@ -126,6 +126,14 @@ The project was built end-to-end: custom JWT authentication, a Spring WebSocket 
 - Exceeded limit returns HTTP 429 with `Retry-After: 60` header and JSON error body
 - Keyed by authenticated username when available; falls back to `X-Forwarded-For` then remote IP
 
+**GitHub Webhook Integration**
+- Webhook endpoint: `POST /api/webhooks/github` (public, verified via HMAC-SHA256)
+- Set `GITHUB_WEBHOOK_SECRET` env var to match the secret configured in GitHub → Settings → Webhooks
+- Handles `push`, `pull_request`, `issues`, `issue_comment` events; all others also forwarded
+- Events are broadcast in real-time to all connected clients via WebSocket `/topic/github`
+- Frontend: click the GitHub (🐙) icon in the sidebar to open the **GitHub Events** live feed panel
+- Shows repo name, pusher/author, commit message for pushes; PR title & action for PRs; issue title for issues
+
 **User Profiles**
 - Edit bio, programming languages, GitHub, LinkedIn, portfolio URL, theme preference
 - Avatar upload (multipart, up to 10 MB) — saved to `/uploads/avatars/`, served as static files
