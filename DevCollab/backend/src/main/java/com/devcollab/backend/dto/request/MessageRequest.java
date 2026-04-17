@@ -8,4 +8,6 @@ public class MessageRequest {
     private String codeContent;
     private String language;
     private Long parentMessageId;
+    private String attachmentUrl;
+    private String attachmentName;
 }

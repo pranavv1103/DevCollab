@@ -61,6 +61,12 @@ public class Message {
     @Builder.Default
     private List<Reaction> reactions = new ArrayList<>();
 
+    @Column(length = 512)
+    private String attachmentUrl;
+
+    @Column(length = 255)
+    private String attachmentName;
+
     @PrePersist
     protected void onCreate() {
         if (timestamp == null) {

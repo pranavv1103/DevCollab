@@ -112,6 +112,8 @@ public class ChatController {
                     .channel(channel)
                     .user(sender)
                     .parentMessage(parentMessage)
+                    .attachmentUrl(messageRequest.getAttachmentUrl())
+                    .attachmentName(messageRequest.getAttachmentName())
                     .timestamp(LocalDateTime.now())
                     .build();
 
@@ -243,6 +245,8 @@ public class ChatController {
             m.put("snippet", null);
         }
 
+        m.put("attachmentUrl", msg.getAttachmentUrl());
+        m.put("attachmentName", msg.getAttachmentName());
         m.put("reactions", java.util.Collections.emptyList());
         return m;
     }

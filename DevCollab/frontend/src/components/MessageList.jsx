@@ -151,7 +151,7 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-  const handleSendMessage = async (text, codeSnippet, language, parentMessageId) => {
+  const handleSendMessage = async (text, codeSnippet, language, parentMessageId, attachmentUrl, attachmentName) => {
     if (editingMessage) {
       if (connected && stompClient) {
         stompClient.publish({
@@ -171,7 +171,7 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
       return;
     }
 
-    const payload = { content: text, codeContent: codeSnippet, language, parentMessageId };
+    const payload = { content: text, codeContent: codeSnippet, language, parentMessageId, attachmentUrl, attachmentName };
 
     if (connected && stompClient) {
       stompClient.publish({
@@ -504,6 +504,11 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
                   <div style={{ fontSize: '10px', color: '#a78bfa', marginBottom: '5px', fontWeight: '600', opacity: 0.8 }}>📌 Pinned</div>
                 )}
                 {msg.content && <div style={{ margin: 0, fontSize: '14px', lineHeight: '1.55', wordBreak: 'break-word' }}>{renderMarkdown(msg.content)}</div>}
+                {msg.attachmentUrl && (
+                  /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl)
+                    ? <img src={`http://localhost:9090${msg.attachmentUrl}`} alt={msg.attachmentName} style={{ maxWidth: '320px', borderRadius: '8px', marginTop: '8px', display: 'block', cursor: 'pointer' }} onClick={() => window.open(`http://localhost:9090${msg.attachmentUrl}`, '_blank')} />
+                    : <a href={`http://localhost:9090${msg.attachmentUrl}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', padding: '6px 12px', background: 'rgba(88,101,242,0.1)', border: '1px solid rgba(88,101,242,0.25)', borderRadius: '6px', color: 'var(--color-primary)', fontSize: '13px', textDecoration: 'none' }}>📎 {msg.attachmentName}</a>
+                )}
 
                 {hasCode && (
                   <div style={{ marginTop: msg.content ? '10px' : '0', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>

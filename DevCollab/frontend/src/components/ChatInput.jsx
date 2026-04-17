@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Code, X, Edit2 } from 'lucide-react';
+import { Send, Code, X, Edit2, Paperclip } from 'lucide-react';
 
 const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, onCancelEdit, readOnly }) => {
   const [text, setText] = useState('');
   const [codeMode, setCodeMode] = useState(false);
   const [codeSnippet, setCodeSnippet] = useState('');
   const [language, setLanguage] = useState('javascript');
+  const [attachment, setAttachment] = useState(null); // { url, name, type }
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
   // Adjust state based on editingMessage changes — "storing information from previous renders"
@@ -31,12 +34,37 @@ const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, o
     if (editingMessage || replyTo) setTimeout(() => textareaRef.current?.focus(), 50);
   }, [editingMessage, replyTo]);
 
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('http://localhost:9090/api/upload/chat', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      setAttachment({ url: data.url, name: data.name, type: data.type });
+    } catch (err) {
+      console.error('File upload error:', err);
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSend = () => {
-    if (!text.trim() && !(codeMode && codeSnippet.trim())) return;
-    onSend(text, codeMode ? codeSnippet : null, codeMode ? language : null, replyTo ? replyTo.id : null);
+    if (!text.trim() && !(codeMode && codeSnippet.trim()) && !attachment) return;
+    onSend(text, codeMode ? codeSnippet : null, codeMode ? language : null, replyTo ? replyTo.id : null, attachment?.url || null, attachment?.name || null);
     setText('');
     setCodeSnippet('');
     setCodeMode(false);
+    setAttachment(null);
     if (textareaRef.current) { textareaRef.current.style.height = '36px'; }
     if (onCancelReply) onCancelReply();
     if (onTyping) onTyping(false);
@@ -66,7 +94,7 @@ const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, o
 
   const isEditing = !!editingMessage;
   const isReplying = !!replyTo && !isEditing;
-  const canSend = text.trim().length > 0 || (codeMode && codeSnippet.trim().length > 0);
+  const canSend = text.trim().length > 0 || (codeMode && codeSnippet.trim().length > 0) || !!attachment;
 
   if (readOnly) {
     return (
@@ -150,8 +178,24 @@ const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, o
           style={{ width: '100%', backgroundColor: '#0d1117', color: '#e6edf3', fontFamily: 'var(--font-family-mono)', border: 'none', padding: '12px 16px', outline: 'none', resize: 'vertical', minHeight: '100px', fontSize: '13px', lineHeight: '1.6', boxSizing: 'border-box' }} />
       )}
 
+      {/* Attachment preview */}
+      {attachment && (
+        <div style={{ padding: '6px 14px', borderTop: '1px solid var(--color-bg-elevation-3)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94a3b8', background: 'rgba(0,0,0,0.15)' }}>
+          {attachment.type.startsWith('image/') && (
+            <img src={`http://localhost:9090${attachment.url}`} alt={attachment.name} style={{ height: '48px', borderRadius: '4px', objectFit: 'cover' }} />
+          )}
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📎 {attachment.name}</span>
+          <button onClick={() => setAttachment(null)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px 4px', flexShrink: 0 }}><X size={13} /></button>
+        </div>
+      )}
+
       {/* Main Input Row */}
       <div style={{ display: 'flex', alignItems: 'flex-end', padding: '8px 12px', gap: '6px' }}>
+        <input ref={fileInputRef} type="file" accept="image/*,.pdf,.txt,.md,.zip,.tar,.gz,.js,.ts,.jsx,.tsx,.py,.java,.go,.rs,.cpp,.c,.json,.yaml,.yml" style={{ display: 'none' }} onChange={handleFileChange} />
+        <button onClick={() => fileInputRef.current?.click()} title="Attach file" disabled={uploading}
+          style={{ padding: '6px', color: attachment ? 'var(--color-primary)' : uploading ? '#f59e0b' : 'var(--color-text-muted)', backgroundColor: attachment ? 'rgba(88,101,242,0.15)' : 'transparent', borderRadius: '6px', border: 'none', cursor: uploading ? 'wait' : 'pointer', display: 'flex', flexShrink: 0, transition: 'all 0.15s' }}>
+          <Paperclip size={18} />
+        </button>
         <button onClick={() => setCodeMode(!codeMode)} title="Attach Code Snippet"
           style={{ padding: '6px', color: codeMode ? 'var(--color-primary)' : 'var(--color-text-muted)', backgroundColor: codeMode ? 'rgba(88,101,242,0.15)' : 'transparent', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'flex', flexShrink: 0, transition: 'all 0.15s' }}>
           <Code size={18} />

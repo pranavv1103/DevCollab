@@ -103,6 +103,14 @@ The project was built end-to-end: custom JWT authentication, a Spring WebSocket 
 - Unread count badge per conversation; auto-marked read on open
 - REST API: `GET /api/dm/{userId}` (history), `POST /api/dm/{userId}/read`, `GET /api/dm/inbox`, `GET /api/dm/users/search`
 
+**File & Image Uploads in Chat**
+- Click the 📎 paperclip button in the chat input to attach a file
+- Supported: images (JPG, PNG, GIF, WebP), PDF, text/code files, ZIP/TAR archives (up to 20 MB)
+- Images display as inline previews; other files render as a styled download link
+- Upload endpoint: `POST /api/upload/chat` (multipart) — returns `{url, name, type}`
+- Files served as static resources from `/uploads/chat/`
+- Attachment `url` and `name` are stored on the `Message` entity and broadcast via WebSocket
+
 **Role-Based Access Control (RBAC)**
 - 3-tier server roles: OWNER, ADMIN, MEMBER
 - Enforced across all controllers and the WebSocket interceptor
