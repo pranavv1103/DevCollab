@@ -80,6 +80,14 @@ The project was built end-to-end: custom JWT authentication, a Spring WebSocket 
 - Rendered with a zero-dependency inline parser (no external library required)
 - Same renderer used for AI modal output
 
+**Polls**
+- Create polls with a custom question and 2–8 options directly in any channel
+- Vote on options; clicking your voted option again toggles the vote off; switching options auto-removes the previous vote
+- Real-time vote count updates via WebSocket (`/topic/channels/{id}/polls/votes`)
+- Animated percentage bars show live vote distribution
+- Poll creators, OWNER, and ADMIN roles can delete polls
+- REST API: `GET/POST /api/channels/{channelId}/polls`, `POST /api/polls/{id}/vote`, `DELETE /api/polls/{id}`
+
 **Role-Based Access Control (RBAC)**
 - 3-tier server roles: OWNER, ADMIN, MEMBER
 - Enforced across all controllers and the WebSocket interceptor

@@ -4,6 +4,7 @@ import { WebSocketContext } from '../context/WebSocketContext';
 import { AuthContext } from '../context/AuthContext';
 import { useUserProfile } from '../context/UserProfileContext';
 import ChatInput from './ChatInput';
+import PollSection from './PollCard';
 import Modal from './Modal';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-twilight.css';
@@ -567,6 +568,11 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
           </div>
         )}
         <div ref={messagesEndRef} />
+      </div>
+
+      {/* Polls */}
+      <div style={{ borderTop: '1px solid var(--color-bg-elevation-2)', maxHeight: '320px', overflowY: 'auto' }}>
+        <PollSection channelId={channelId} userRole={userRole} />
       </div>
 
       {/* Input Area */}
