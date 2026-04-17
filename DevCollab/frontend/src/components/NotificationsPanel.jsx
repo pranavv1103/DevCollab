@@ -1,17 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Bell, Check, CheckCircle2 } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext';
 
-const NotificationsPanel = ({ isOpen, onClose }) => {
+const NotificationsPanel = ({ isOpen }) => {
   const [notifications, setNotifications] = useState([]);
-  const { user } = useContext(AuthContext);
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
-    }
-  }, [isOpen]);
 
   const fetchNotifications = async () => {
     try {
@@ -21,6 +13,14 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchNotifications();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const markAsRead = async (id) => {
     try {

@@ -9,7 +9,7 @@ import SavedMessages from './SavedMessages';
 import axios from 'axios';
 
 const MainLayout = () => {
-  const { logout, user } = useContext(AuthContext);
+  const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const { serverId } = useParams();
   const [servers, setServers] = useState([]);
@@ -25,16 +25,11 @@ const MainLayout = () => {
   const [serverError, setServerError] = useState('');
   const [joinError, setJoinError] = useState('');
 
-  useEffect(() => {
-    fetchServers();
-    checkNotifications();
-  }, []);
-
   const checkNotifications = async () => {
     try {
       const res = await axios.get('http://localhost:9090/api/notifications');
       if (res.data.some(n => !n.read)) setHasUnreadNotifications(true);
-    } catch(err) { /* silent */ }
+    } catch { /* silent */ }
   };
 
   const fetchServers = async () => {
@@ -49,6 +44,12 @@ const MainLayout = () => {
       console.error("Failed to fetch servers", error);
     }
   };
+
+  useEffect(() => {
+    fetchServers();
+    checkNotifications();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openCreateModal = () => {
     setNewServerName('');

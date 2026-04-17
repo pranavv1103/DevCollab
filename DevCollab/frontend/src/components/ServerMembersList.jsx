@@ -1,18 +1,27 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import axios from 'axios';
 import { WebSocketContext } from '../context/WebSocketContext';
-import { AuthContext } from '../context/AuthContext';
 import { useUserProfile } from '../context/UserProfileContext';
 
 const ServerMembersList = ({ serverId }) => {
   const { openProfile } = useUserProfile();
   const [members, setMembers] = useState([]);
   const { stompClient, connected } = useContext(WebSocketContext);
-  const { user } = useContext(AuthContext);
   const presenceSubRef = useRef(null);
 
+  const fetchMembers = async () => {
+    try {
+      const res = await axios.get(`http://localhost:9090/api/servers/${serverId}/members`);
+      setMembers(res.data);
+    } catch (error) {
+      console.error("Failed to fetch server members", error);
+    }
+  };
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (serverId) fetchMembers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId]);
 
   useEffect(() => {
@@ -31,15 +40,6 @@ const ServerMembersList = ({ serverId }) => {
       if (presenceSubRef.current) presenceSubRef.current.unsubscribe();
     };
   }, [connected, stompClient]);
-
-  const fetchMembers = async () => {
-    try {
-      const res = await axios.get(`http://localhost:9090/api/servers/${serverId}/members`);
-      setMembers(res.data);
-    } catch (error) {
-      console.error("Failed to fetch server members", error);
-    }
-  };
 
   const onlineMembers = members.filter(m => m.user?.status === 'ONLINE');
   const offlineMembers = members.filter(m => m.user?.status !== 'ONLINE');

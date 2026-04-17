@@ -275,7 +275,7 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
         'code-review': '🔍 Code Review',
       };
       setAiModalContent({ isOpen: true, title: titles[action] || '✨ AI Assistant', message: res.data.result });
-    } catch (err) {
+    } catch {
       setAiModalContent({ isOpen: true, title: '⚠️ AI Error', message: 'Failed to generate AI response. Please try again.' });
     } finally {
       setIsAiLoading(false);
@@ -451,7 +451,7 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
                 {msg.pinned && (
                   <div style={{ fontSize: '10px', color: '#a78bfa', marginBottom: '5px', fontWeight: '600', opacity: 0.8 }}>📌 Pinned</div>
                 )}
-                {msg.content && <p style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: '14px', lineHeight: '1.55', wordBreak: 'break-word' }}>{msg.content}</p>}
+                {msg.content && <div style={{ margin: 0, fontSize: '14px', lineHeight: '1.55', wordBreak: 'break-word' }}>{renderMarkdown(msg.content)}</div>}
 
                 {hasCode && (
                   <div style={{ marginTop: msg.content ? '10px' : '0', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>

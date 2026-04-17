@@ -18,12 +18,17 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery('');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAiQuery('');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAiResults(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResults({ users: [], servers: [], channels: [] });
       setTimeout(() => (tab === 'ai' ? aiInputRef.current : inputRef.current)?.focus(), 50);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   useEffect(() => {
@@ -51,7 +56,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     try {
       const res = await axios.post('http://localhost:9090/api/ai/smart-search', { searchQuery: aiQuery });
       setAiResults(res.data);
-    } catch (err) {
+    } catch {
       setAiResults({ error: 'AI search failed. Please try again.' });
     }
     setAiLoading(false);

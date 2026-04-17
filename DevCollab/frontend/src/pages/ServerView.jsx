@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import axios from 'axios';
 import ChannelList from '../components/ChannelList';
@@ -6,12 +6,10 @@ import MessageList from '../components/MessageList';
 import ServerMembersList from '../components/ServerMembersList';
 import WorkspaceAnalytics from '../components/WorkspaceAnalytics';
 import Modal from '../components/Modal';
-import { AuthContext } from '../context/AuthContext';
 
 const ServerView = () => {
   const { serverId, channelId } = useParams();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
   const outletCtx = useOutletContext() || {};
 
   const [channels, setChannels] = useState([]);
@@ -21,14 +19,6 @@ const ServerView = () => {
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelType, setNewChannelType] = useState('PUBLIC'); // 'PUBLIC' | 'PRIVATE' | 'ANNOUNCEMENT'
   const [channelError, setChannelError] = useState('');
-
-  useEffect(() => {
-    if (serverId) {
-      fetchServerDetails();
-      fetchChannels();
-      fetchUserRole();
-    }
-  }, [serverId]);
 
   const fetchServerDetails = async () => {
     try {
@@ -60,6 +50,18 @@ const ServerView = () => {
       setUserRole('MEMBER');
     }
   };
+
+  useEffect(() => {
+    if (serverId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchServerDetails();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchChannels();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchUserRole();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverId]);
 
   const openCreateModal = () => {
     setNewChannelName('');

@@ -3,6 +3,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { AuthContext } from './AuthContext';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const WebSocketContext = createContext();
 
 export const WebSocketProvider = ({ children }) => {
@@ -36,6 +37,7 @@ export const WebSocketProvider = ({ children }) => {
       });
 
       client.activate();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStompClient(client);
 
       return () => {

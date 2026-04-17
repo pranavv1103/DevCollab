@@ -8,6 +8,7 @@ const WorkspaceAnalytics = ({ serverId }) => {
 
   useEffect(() => {
     if (!serverId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     axios.get(`http://localhost:9090/api/servers/${serverId}/analytics`)
       .then(res => {

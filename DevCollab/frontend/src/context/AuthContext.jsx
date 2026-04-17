@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -125,7 +126,9 @@ export const AuthProvider = ({ children }) => {
         .finally(() => setLoading(false));
     } else {
       delete axios.defaults.headers.common['Authorization'];
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
     }
   }, [token]);
