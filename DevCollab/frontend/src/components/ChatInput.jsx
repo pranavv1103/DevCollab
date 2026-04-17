@@ -8,24 +8,28 @@ const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, o
   const [language, setLanguage] = useState('javascript');
   const textareaRef = useRef(null);
 
-  // Pre-fill when editing an existing message
-  useEffect(() => {
+  // Adjust state based on editingMessage changes — "storing information from previous renders"
+  // pattern (https://react.dev/reference/react/useState#storing-information-from-previous-renders)
+  const [prevEditingMessage, setPrevEditingMessage] = useState(null);
+  if (editingMessage !== prevEditingMessage) {
+    setPrevEditingMessage(editingMessage);
     if (editingMessage) {
       setText(editingMessage.content || '');
-      if (editingMessage.snippet?.codeContent) {
-        setCodeSnippet(editingMessage.snippet.codeContent);
-        setCodeMode(true);
-        if (editingMessage.snippet.language) setLanguage(editingMessage.snippet.language);
-      }
-      setTimeout(() => textareaRef.current?.focus(), 50);
-    } else {
-      if (!replyTo) { setText(''); setCodeSnippet(''); setCodeMode(false); }
+      const hasSnippet = !!editingMessage.snippet?.codeContent;
+      setCodeSnippet(hasSnippet ? editingMessage.snippet.codeContent : '');
+      setCodeMode(hasSnippet);
+      if (hasSnippet && editingMessage.snippet.language) setLanguage(editingMessage.snippet.language);
+    } else if (!replyTo) {
+      setText('');
+      setCodeSnippet('');
+      setCodeMode(false);
     }
-  }, [editingMessage]);
+  }
 
+  // Focus input when entering edit or reply mode (no setState — safe in effect)
   useEffect(() => {
-    if (replyTo) setTimeout(() => textareaRef.current?.focus(), 50);
-  }, [replyTo]);
+    if (editingMessage || replyTo) setTimeout(() => textareaRef.current?.focus(), 50);
+  }, [editingMessage, replyTo]);
 
   const handleSend = () => {
     if (!text.trim() && !(codeMode && codeSnippet.trim())) return;

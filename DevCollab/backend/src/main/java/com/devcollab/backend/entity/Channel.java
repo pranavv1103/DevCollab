@@ -40,7 +40,7 @@ public class Channel {
      * Defaults to PUBLIC.
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "channel_type", nullable = false)
+    @Column(name = "channel_type", nullable = false, columnDefinition = "varchar(255) default 'PUBLIC'")
     @Builder.Default
     private ChannelType channelType = ChannelType.PUBLIC;
 

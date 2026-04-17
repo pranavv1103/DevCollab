@@ -1,12 +1,9 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Hash, Plus, Copy, Trash2, Lock, LogOut, Megaphone } from 'lucide-react';
 import UserProfile from './UserProfile';
-import { AuthContext } from '../context/AuthContext';
 
 const ChannelList = ({ channels, activeChannelId, serverId, server, userRole, onCreateChannel, onDeleteChannel, onLeaveServer, onDeleteServer }) => {
-  const { user } = useContext(AuthContext);
-
   const isOwner = userRole === 'OWNER';
   const isAdmin = userRole === 'ADMIN';
   const canManage = isOwner || isAdmin;
