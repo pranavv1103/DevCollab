@@ -115,6 +115,11 @@ const MemberItem = ({ member, isOnline, onOpenProfile }) => {
 
       <div style={{ marginLeft: '12px', display: 'flex', flexDirection: 'column' }}>
         <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{member.user?.username}</span>
+        {(member.user?.statusEmoji || member.user?.customStatus) && (
+          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+            {member.user.statusEmoji} {member.user.customStatus}
+          </span>
+        )}
         {member.role && (
           <span style={{
             fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em',
