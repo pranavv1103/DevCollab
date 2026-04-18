@@ -33,7 +33,9 @@ const ServerView = () => {
     try {
       const res = await axios.get(`http://localhost:9090/api/servers/${serverId}/channels`);
       setChannels(res.data);
-      if (!channelId && res.data.length > 0) {
+      if (res.data.length > 0 && (!channelId || isNaN(Number(channelId)))) {
+        navigate(`/servers/${serverId}/channels/${res.data[0].id}`, { replace: true });
+      } else if (!channelId && res.data.length > 0) {
         navigate(`/servers/${serverId}/channels/${res.data[0].id}`, { replace: true });
       }
     } catch (err) {

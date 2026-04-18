@@ -61,4 +61,16 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     /** Load a message with its user eagerly — used to avoid LazyInitializationException. */
     @Query("SELECT m FROM Message m JOIN FETCH m.user WHERE m.id = :id")
     java.util.Optional<Message> findByIdWithUser(@Param("id") Long id);
+
+    /** Return all thread replies for a given parent message, oldest first. */
+    @Query("SELECT m FROM Message m WHERE m.parentMessage.id = :parentId ORDER BY m.timestamp ASC")
+    List<Message> findByParentMessageId(@Param("parentId") Long parentId);
+
+    /** Count replies to a message (used for reply-count badges). */
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.parentMessage.id = :parentId")
+    long countByParentMessageId(@Param("parentId") Long parentId);
+
+    /** Load only top-level messages (no parent) for a channel. */
+    @Query("SELECT m FROM Message m WHERE m.channel.id = :channelId AND m.parentMessage IS NULL ORDER BY m.timestamp DESC")
+    Page<Message> findTopLevelByChannelIdOrderByTimestampDesc(@Param("channelId") Long channelId, Pageable pageable);
 }

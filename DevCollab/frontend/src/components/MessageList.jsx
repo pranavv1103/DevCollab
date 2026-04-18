@@ -66,6 +66,16 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
   // Code execution via Piston API
   const [runResults, setRunResults] = useState({}); // { [msgId]: { running, stdout, stderr } }
 
+  // Thread reply panel
+  const [openThread, setOpenThread] = useState(null); // { parentMsg, parentMsgId }
+  const [threadMessages, setThreadMessages] = useState([]);
+  const [threadInput, setThreadInput] = useState('');
+  const openThreadRef = useRef(null);
+  const threadEndRef = useRef(null);
+
+  // Keep openThreadRef in sync for WS handler closures
+  useEffect(() => { openThreadRef.current = openThread; }, [openThread]);
+
   // Close AI menu on outside click
   useEffect(() => {
     const handler = (e) => { if (aiMenuRef.current && !aiMenuRef.current.contains(e.target)) setShowAiMenu(false); };
@@ -95,6 +105,11 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
         if (newMsg.id && messageIdsRef.current.has(newMsg.id)) return;
         if (newMsg.id) messageIdsRef.current.add(newMsg.id);
         setMessages(prev => [...prev, newMsg]);
+        // Also push into open thread if this is a reply to the thread parent
+        if (openThreadRef.current && newMsg.parentMessage?.id === openThreadRef.current.parentMsgId) {
+          setThreadMessages(prev => [...prev, newMsg]);
+          setTimeout(() => threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+        }
       });
 
       typingSubRef.current = stompClient.subscribe(`/topic/channels/${channelId}/typing`, (output) => {
@@ -191,6 +206,48 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
         console.error('Failed to send message via HTTP fallback', err);
       }
     }
+  };
+
+  // ── Thread panel helpers ─────────────────────────────────────────────────
+  const openThreadPanel = async (msg) => {
+    setOpenThread({ parentMsg: msg, parentMsgId: msg.id });
+    setThreadInput('');
+    try {
+      const res = await axios.get(`http://localhost:9090/api/messages/${msg.id}/thread`);
+      setThreadMessages(res.data);
+      setTimeout(() => threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    } catch {
+      setThreadMessages([]);
+    }
+  };
+
+  const closeThreadPanel = () => {
+    setOpenThread(null);
+    setThreadMessages([]);
+    setThreadInput('');
+  };
+
+  const handleSendThreadReply = async () => {
+    if (!threadInput.trim() || !openThread) return;
+    const payload = {
+      content: threadInput,
+      parentMessageId: openThread.parentMsgId,
+    };
+    if (connected && stompClient) {
+      stompClient.publish({
+        destination: `/app/chat.sendMessage/${channelId}`,
+        body: JSON.stringify(payload),
+      });
+    } else {
+      try {
+        const res = await axios.post(`http://localhost:9090/api/channels/${channelId}/messages`, payload);
+        setThreadMessages(prev => [...prev, res.data]);
+        setTimeout(() => threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+      } catch (err) {
+        console.error('Failed to send thread reply:', err);
+      }
+    }
+    setThreadInput('');
   };
 
   const handleDeleteMessage = async (messageId) => {
@@ -365,7 +422,8 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
   const canModerate = userRole === 'OWNER' || userRole === 'ADMIN';
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg-base)', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'row', backgroundColor: 'var(--color-bg-base)', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{
         height: '56px', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -562,6 +620,7 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
               {/* Message actions (hover via CSS) */}
               <div className="message-actions" style={{ display: 'flex', gap: '3px', marginTop: '3px', flexDirection: isOwn ? 'row-reverse' : 'row' }}>
                 <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-text-muted)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px' }} onClick={() => { setReplyTo(msg); setEditingMessage(null); }}>↩ Reply</button>
+                <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-text-muted)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px' }} onClick={() => openThreadPanel(msg)}>💬 Thread</button>
                 {isOwn && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-text-muted)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px' }} onClick={() => { setEditingMessage(msg); setReplyTo(null); }}>✏ Edit</button>}
                 {(isOwn || canModerate) && <button className="btn-icon" style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--color-danger)', border: '1px solid rgba(237,66,69,0.3)', borderRadius: '6px' }} onClick={() => handleDeleteMessage(msg.id)}>Delete</button>}
                 <button
@@ -719,6 +778,78 @@ const MessageList = ({ channelId, channelName, channelType, userRole, serverId }
           </div>
         </div>
       </Modal>
+    </div>
+
+      {/* ── Thread Reply Panel ── */}
+      {openThread && (
+        <div style={{
+          width: '340px', minWidth: '340px',
+          backgroundColor: 'var(--color-bg-elevation-1)',
+          borderLeft: '1px solid var(--color-bg-elevation-3)',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          {/* Thread header */}
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--color-bg-elevation-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+            <div>
+              <div style={{ fontWeight: '700', fontSize: '15px', color: 'white' }}>💬 Thread</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                @{openThread.parentMsg?.user?.username}
+              </div>
+            </div>
+            <button onClick={closeThreadPanel} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>✕</button>
+          </div>
+
+          {/* Original message */}
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--color-bg-elevation-3)', backgroundColor: 'var(--color-bg-elevation-2)', flexShrink: 0 }}>
+            <div style={{ fontSize: '12px', color: 'var(--color-primary)', fontWeight: '600', marginBottom: '4px' }}>{openThread.parentMsg?.user?.username}</div>
+            <div style={{ fontSize: '13px', color: 'var(--color-text-base)', lineHeight: '1.5', opacity: 0.85 }}>{openThread.parentMsg?.content}</div>
+          </div>
+
+          {/* Thread replies */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }} className="no-scrollbar">
+            {threadMessages.length === 0 && (
+              <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', textAlign: 'center', paddingTop: '24px' }}>No replies yet. Start the thread!</div>
+            )}
+            {threadMessages.map((tm, i) => {
+              const tmOwn = user && tm.user?.username === user.username;
+              return (
+                <div key={tm.id || i} style={{ display: 'flex', flexDirection: 'column', alignItems: tmOwn ? 'flex-end' : 'flex-start' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexDirection: tmOwn ? 'row-reverse' : 'row' }}>
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: tmOwn ? 'linear-gradient(135deg,#5865f2,#667eea)' : 'linear-gradient(135deg,#374151,#4b5563)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'white', fontWeight: '700' }}>
+                      {(tm.user?.username || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '600', color: tmOwn ? 'var(--color-primary)' : '#cbd5e1' }}>{tm.user?.username}</span>
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{new Date(tm.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div style={{ backgroundColor: tmOwn ? 'var(--color-primary)' : 'var(--color-bg-elevation-2)', padding: '7px 11px', borderRadius: tmOwn ? '12px 4px 12px 12px' : '4px 12px 12px 12px', maxWidth: '90%', fontSize: '13px', lineHeight: '1.5', wordBreak: 'break-word' }}>
+                    {tm.content}
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={threadEndRef} />
+          </div>
+
+          {/* Thread reply input */}
+          <div style={{ padding: '12px 14px', borderTop: '1px solid var(--color-bg-elevation-3)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', backgroundColor: 'var(--color-bg-elevation-2)', borderRadius: '10px', border: '1px solid var(--color-bg-elevation-3)', padding: '8px 12px' }}>
+              <textarea
+                value={threadInput}
+                onChange={e => setThreadInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendThreadReply(); } }}
+                placeholder={`Reply in thread…`}
+                rows={1}
+                style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', outline: 'none', resize: 'none', fontFamily: 'inherit', fontSize: '13px', lineHeight: '1.5', maxHeight: '100px', overflowY: 'auto' }}
+              />
+              <button onClick={handleSendThreadReply} disabled={!threadInput.trim()}
+                style={{ background: 'none', border: 'none', color: threadInput.trim() ? 'var(--color-primary)' : '#374151', cursor: threadInput.trim() ? 'pointer' : 'default', padding: '2px', flexShrink: 0 }}>
+                ➤
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

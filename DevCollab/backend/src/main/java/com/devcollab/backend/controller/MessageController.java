@@ -257,4 +257,26 @@ public class MessageController {
         msg = messageRepository.save(msg);
         return ResponseEntity.ok(msg);
     }
+
+    // ── Thread Replies ────────────────────────────────────────────────────────
+
+    @GetMapping("/messages/{messageId}/thread")
+    public ResponseEntity<?> getThread(@PathVariable Long messageId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<Message> parentOpt = messageRepository.findById(messageId);
+        if (!parentOpt.isPresent()) return ResponseEntity.notFound().build();
+        Message parent = parentOpt.get();
+        Long serverId = parent.getChannel().getServer().getId();
+        Optional<com.devcollab.backend.entity.ServerMember> memberOpt =
+                serverMemberRepository.findByServerIdAndUserId(serverId, userDetails.getId());
+        if (!memberOpt.isPresent()) return ResponseEntity.status(403).body(new MessageResponse("Error: Not a member"));
+        List<Message> replies = messageRepository.findByParentMessageId(messageId);
+        return ResponseEntity.ok(replies);
+    }
+
+    @GetMapping("/messages/{messageId}/thread/count")
+    public ResponseEntity<?> getThreadCount(@PathVariable Long messageId) {
+        long count = messageRepository.countByParentMessageId(messageId);
+        return ResponseEntity.ok(java.util.Map.of("count", count));
+    }
 }

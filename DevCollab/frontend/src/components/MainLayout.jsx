@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Outlet, useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { WebSocketContext } from '../context/WebSocketContext';
 import Sidebar from './Sidebar';
 import Modal from './Modal';
 import GlobalSearch from './GlobalSearch';
@@ -11,9 +12,11 @@ import GitHubEventsPanel from './GitHubEventsPanel';
 import axios from 'axios';
 
 const MainLayout = () => {
-  const { logout } = useContext(AuthContext);
+  const { logout, user } = useContext(AuthContext);
+  const { stompClient, connected } = useContext(WebSocketContext);
   const navigate = useNavigate();
   const { serverId } = useParams();
+  const notifSubRef = useRef(null);
   const [servers, setServers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newServerName, setNewServerName] = useState('');
@@ -53,8 +56,31 @@ const MainLayout = () => {
   useEffect(() => {
     fetchServers();
     checkNotifications();
+    // Request browser notification permission on first load
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Subscribe to per-user WS notification topic for real-time desktop alerts
+  useEffect(() => {
+    if (!connected || !stompClient || !user?.id) return;
+    if (notifSubRef.current) notifSubRef.current.unsubscribe();
+    notifSubRef.current = stompClient.subscribe(`/topic/user/${user.id}/notifications`, (output) => {
+      const notif = JSON.parse(output.body);
+      setHasUnreadNotifications(true);
+      // Browser desktop notification for mentions
+      if (notif.type === 'MENTION' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('DevCollab — You were mentioned!', {
+          body: notif.content || 'Someone mentioned you in a channel.',
+          icon: '/favicon.ico',
+        });
+      }
+    });
+    return () => { if (notifSubRef.current) notifSubRef.current.unsubscribe(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected, stompClient, user?.id]);
 
   const openCreateModal = () => {
     setNewServerName('');

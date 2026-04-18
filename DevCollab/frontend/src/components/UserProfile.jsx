@@ -14,6 +14,13 @@ const UserProfile = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [saveStatus, setSaveStatus] = useState(''); // '' | 'saving' | 'saved' | 'error'
 
+  // Custom status
+  const [statusEmoji, setStatusEmoji] = useState('');
+  const [customStatus, setCustomStatus] = useState('');
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [statusInput, setStatusInput] = useState({ emoji: '', text: '' });
+  const STATUS_EMOJIS = ['😀','💻','☕','🎮','📚','🏃','😴','🎯','🔥','🚀','🎧','🧠','✍️','🎉','🤔'];
+
   useEffect(() => {
     if (user?.id) {
       fetchProfile();
@@ -25,6 +32,8 @@ const UserProfile = () => {
       const res = await axios.get(`http://localhost:9090/api/users/${user.id}`);
       setProfile(res.data);
       setFormData(res.data);
+      setStatusEmoji(res.data.statusEmoji || '');
+      setCustomStatus(res.data.customStatus || '');
     } catch (error) {
       console.error("Failed to fetch profile", error);
     }
@@ -54,6 +63,17 @@ const UserProfile = () => {
     } catch (error) {
       console.error("Failed to update profile", error);
       setSaveStatus('error');
+    }
+  };
+
+  const handleSaveStatus = async () => {
+    try {
+      await axios.put('http://localhost:9090/api/users/me/status', { emoji: statusInput.emoji, text: statusInput.text });
+      setStatusEmoji(statusInput.emoji);
+      setCustomStatus(statusInput.text);
+      setShowStatusPicker(false);
+    } catch (err) {
+      console.error('Failed to update status', err);
     }
   };
 
@@ -124,16 +144,66 @@ const UserProfile = () => {
             <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'white', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
               {profile.username}
             </span>
-            <span style={{ fontSize: '10px', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
-              Online
-            </span>
+            {customStatus ? (
+              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                {statusEmoji} {customStatus}
+              </span>
+            ) : (
+              <span style={{ fontSize: '10px', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
+                Online
+              </span>
+            )}
           </div>
         </div>
-        <button onClick={openSettings} className="btn-icon" title="User Settings" style={{ color: 'var(--color-text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
-          <Settings size={18} />
-        </button>
+        <div style={{ display: 'flex', gap: '2px' }}>
+          <button
+            onClick={() => { setStatusInput({ emoji: statusEmoji, text: customStatus }); setShowStatusPicker(v => !v); }}
+            className="btn-icon" title="Set Status"
+            style={{ color: customStatus ? 'var(--color-primary)' : 'var(--color-text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', fontSize: '16px', lineHeight: 1 }}
+          >
+            {statusEmoji || '😶'}
+          </button>
+          <button onClick={openSettings} className="btn-icon" title="User Settings" style={{ color: 'var(--color-text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}>
+            <Settings size={18} />
+          </button>
+        </div>
       </div>
+
+      {/* Status Picker Popover */}
+      {showStatusPicker && (
+        <div style={{
+          position: 'fixed', bottom: '70px', left: '80px', zIndex: 200,
+          backgroundColor: 'var(--color-bg-elevation-2)',
+          border: '1px solid var(--color-bg-elevation-3)',
+          borderRadius: '10px', padding: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          width: '280px',
+        }}>
+          <div style={{ fontWeight: '700', fontSize: '14px', color: 'white', marginBottom: '10px' }}>Set a status</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+            {STATUS_EMOJIS.map(em => (
+              <button key={em} onClick={() => setStatusInput(s => ({ ...s, emoji: em }))}
+                style={{ width: '32px', height: '32px', fontSize: '18px', background: statusInput.emoji === em ? 'rgba(88,101,242,0.3)' : 'var(--color-bg-elevation-1)', border: statusInput.emoji === em ? '1px solid var(--color-primary)' : '1px solid transparent', borderRadius: '6px', cursor: 'pointer' }}>
+                {em}
+              </button>
+            ))}
+          </div>
+          <input
+            type="text"
+            value={statusInput.text}
+            onChange={e => setStatusInput(s => ({ ...s, text: e.target.value }))}
+            onKeyDown={e => { if (e.key === 'Enter') handleSaveStatus(); if (e.key === 'Escape') setShowStatusPicker(false); }}
+            placeholder="What's your status?"
+            maxLength={80}
+            style={{ width: '100%', padding: '8px 10px', backgroundColor: 'var(--color-bg-base)', border: '1px solid var(--color-bg-elevation-3)', borderRadius: '6px', color: 'white', fontSize: '13px', outline: 'none', marginBottom: '10px', boxSizing: 'border-box' }}
+          />
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button onClick={() => { setStatusInput({ emoji: '', text: '' }); handleSaveStatus(); }} style={{ background: 'transparent', border: '1px solid var(--color-bg-elevation-3)', color: 'var(--color-text-muted)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>Clear status</button>
+            <button onClick={handleSaveStatus} className="btn-primary" style={{ padding: '6px 16px', fontSize: '12px' }}>Save</button>
+          </div>
+        </div>
+      )}
 
       <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditMode(false); setSaveStatus(''); }} title="User Settings">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--color-bg-elevation-3)' }}>

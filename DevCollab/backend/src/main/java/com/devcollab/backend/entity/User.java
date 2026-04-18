@@ -58,6 +58,12 @@ public class User {
 
     private LocalDateTime lastSeen;
 
+    /** Short custom status text e.g. "Coding away 🚀" */
+    private String customStatus;
+
+    /** Emoji displayed alongside the status text */
+    private String statusEmoji;
+
     @Enumerated(EnumType.STRING)
     private Role role;
 

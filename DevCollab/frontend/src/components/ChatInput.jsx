@@ -58,9 +58,26 @@ const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, o
     }
   };
 
+  const processSlashCommand = (rawText) => {
+    const trimmed = rawText.trim();
+    if (!trimmed.startsWith('/')) return { processed: rawText };
+    const [cmd, ...rest] = trimmed.slice(1).split(' ');
+    const arg = rest.join(' ');
+    switch (cmd.toLowerCase()) {
+      case 'me': return { processed: `_${arg || '…'}_` };
+      case 'shrug': return { processed: `${arg} ¯\\_(ツ)_/¯` };
+      case 'tableflip': return { processed: `${arg} (╯°□°）╯︵ ┻━┻` };
+      case 'unflip': return { processed: `${arg} ┬─┬ノ( º _ ºノ)` };
+      case 'lenny': return { processed: `${arg} ( ͡° ͜ʖ ͡°)` };
+      case 'wave': return { processed: `${arg} 👋` };
+      default: return { processed: rawText };
+    }
+  };
+
   const handleSend = () => {
     if (!text.trim() && !(codeMode && codeSnippet.trim()) && !attachment) return;
-    onSend(text, codeMode ? codeSnippet : null, codeMode ? language : null, replyTo ? replyTo.id : null, attachment?.url || null, attachment?.name || null);
+    const { processed } = processSlashCommand(text);
+    onSend(processed, codeMode ? codeSnippet : null, codeMode ? language : null, replyTo ? replyTo.id : null, attachment?.url || null, attachment?.name || null);
     setText('');
     setCodeSnippet('');
     setCodeMode(false);
@@ -186,6 +203,17 @@ const ChatInput = ({ onSend, onTyping, replyTo, onCancelReply, editingMessage, o
           )}
           <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📎 {attachment.name}</span>
           <button onClick={() => setAttachment(null)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px 4px', flexShrink: 0 }}><X size={13} /></button>
+        </div>
+      )}
+
+      {/* Slash command hint */}
+      {text.startsWith('/') && !codeMode && (
+        <div style={{ padding: '6px 14px', borderBottom: '1px solid var(--color-bg-elevation-3)', display: 'flex', flexWrap: 'wrap', gap: '6px', backgroundColor: 'rgba(0,0,0,0.15)' }}>
+          {['/me <action>', '/shrug <msg>', '/tableflip', '/unflip', '/lenny', '/wave'].map(cmd => (
+            <span key={cmd} style={{ fontSize: '11px', backgroundColor: 'var(--color-bg-elevation-3)', color: 'var(--color-text-muted)', padding: '2px 8px', borderRadius: '10px', fontFamily: 'monospace', cursor: 'pointer' }}
+              onClick={() => setText(cmd.split(' ')[0] + ' ')}
+            >{cmd}</span>
+          ))}
         </div>
       )}
 

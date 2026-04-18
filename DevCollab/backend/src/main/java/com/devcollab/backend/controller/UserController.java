@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Map;
 import java.util.Optional;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -118,5 +119,18 @@ public class UserController {
         } catch (IOException ex) {
             return ResponseEntity.internalServerError().body(new MessageResponse("Could not store image"));
         }
+    }
+
+    @PutMapping("/me/status")
+    public ResponseEntity<?> updateStatus(@RequestBody Map<String, String> body) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Optional<User> userOpt = userRepository.findById(userDetails.getId());
+        if (!userOpt.isPresent()) return ResponseEntity.notFound().build();
+        User user = userOpt.get();
+        user.setStatusEmoji(body.getOrDefault("emoji", ""));
+        user.setCustomStatus(body.getOrDefault("text", ""));
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("emoji", user.getStatusEmoji() != null ? user.getStatusEmoji() : "",
+                                        "text", user.getCustomStatus() != null ? user.getCustomStatus() : ""));
     }
 }
