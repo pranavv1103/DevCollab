@@ -38,14 +38,14 @@ public class DocumentService {
     private final KafkaTemplate<String, DocumentUploadedEvent> kafkaTemplate;
 
     public PolicyDocument uploadDocument(MultipartFile file, UUID companyId, UUID uploadedBy) throws IOException {
-        // Create upload directory if it doesn't exist
-        Path uploadPath = Paths.get(uploadsDir);
+        // Resolve upload directory to an absolute path so it's consistent across contexts
+        Path uploadPath = Paths.get(uploadsDir).toAbsolutePath();
         Files.createDirectories(uploadPath);
 
         // Store file with a UUID filename to avoid collisions
         String storedFileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
         Path filePath = uploadPath.resolve(storedFileName);
-        file.transferTo(filePath.toFile());
+        Files.copy(file.getInputStream(), filePath);
 
         // Persist metadata
         PolicyDocument doc = new PolicyDocument();
@@ -56,11 +56,15 @@ public class DocumentService {
         doc.setStatus(DocumentStatus.PENDING);
         doc = documentRepository.save(doc);
 
-        // Publish Kafka event for async ingestion
-        DocumentUploadedEvent event = new DocumentUploadedEvent(
-                doc.getId(), filePath.toAbsolutePath().toString(), companyId, uploadedBy);
-        kafkaTemplate.send("document.uploaded", doc.getId().toString(), event);
-        log.info("Published document.uploaded event for doc {}", doc.getId());
+        // Publish Kafka event for async ingestion (best-effort — upload succeeds even if Kafka is unavailable)
+        try {
+            DocumentUploadedEvent event = new DocumentUploadedEvent(
+                    doc.getId(), filePath.toAbsolutePath().toString(), companyId, uploadedBy);
+            kafkaTemplate.send("document.uploaded", doc.getId().toString(), event);
+            log.info("Published document.uploaded event for doc {}", doc.getId());
+        } catch (Exception e) {
+            log.warn("Kafka unavailable — document {} saved but ingestion event not published: {}", doc.getId(), e.getMessage());
+        }
 
         return doc;
     }

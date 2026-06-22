@@ -1,6 +1,6 @@
 name: HRPilot CI
 
-on:
+"on":
   push:
     branches: [main, "appmod/**"]
   pull_request:

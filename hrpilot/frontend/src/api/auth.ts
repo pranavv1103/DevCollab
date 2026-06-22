@@ -29,3 +29,8 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
   const response = await api.post<AuthResponse>('/api/v1/auth/register', data);
   return response.data;
 };
+
+export const googleLogin = async (credential: string): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>('/api/v1/auth/google', { credential });
+  return response.data;
+};

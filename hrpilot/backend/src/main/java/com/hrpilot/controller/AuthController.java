@@ -1,6 +1,7 @@
 package com.hrpilot.controller;
 
 import com.hrpilot.dto.AuthResponse;
+import com.hrpilot.dto.GoogleAuthRequest;
 import com.hrpilot.dto.LoginRequest;
 import com.hrpilot.dto.RegisterRequest;
 import com.hrpilot.service.AuthService;
@@ -32,5 +33,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req) {
         return ResponseEntity.ok(authService.login(req));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleAuth(@Valid @RequestBody GoogleAuthRequest req) {
+        return ResponseEntity.ok(authService.googleAuth(req.getCredential()));
     }
 }

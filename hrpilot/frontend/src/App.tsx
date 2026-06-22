@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import LoginPage from './pages/LoginPage';
 import ChatPage from './pages/ChatPage';
 import AgentPage from './pages/AgentPage';
@@ -12,7 +13,10 @@ const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) =>
 };
 
 export default function App() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
+
   return (
+    <GoogleOAuthProvider clientId={googleClientId}>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -22,5 +26,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>
     </BrowserRouter>
+    </GoogleOAuthProvider>
   );
 }

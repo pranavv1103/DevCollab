@@ -38,8 +38,15 @@ const AgentPage: React.FC = () => {
     try {
       const response = await askAgent({ question, context: context || undefined });
       setAnswer(response.answer);
-    } catch {
-      setError('Agent request failed. Please try again.');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status: number; data?: { error?: string } } };
+      if (axiosErr?.response?.status === 500) {
+        setError(axiosErr.response.data?.error ?? 'Server error. Please try again.');
+      } else if (axiosErr?.response?.status === 403 || axiosErr?.response?.status === 401) {
+        setError('Session expired. Please log out and log back in.');
+      } else {
+        setError('Agent request failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

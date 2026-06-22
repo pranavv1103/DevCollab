@@ -51,12 +51,19 @@ app:
     expiration: 86400000
   uploads:
     directory: uploads
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:185075856780-0g382jjsjn7acali8uhh9gkm1b3uqdjc.apps.googleusercontent.com}
 
 grpc:
   server:
     port: 9090
 
 management:
+  health:
+    redis:
+      enabled: false
+    kafka:
+      enabled: false
   endpoints:
     web:
       exposure:
