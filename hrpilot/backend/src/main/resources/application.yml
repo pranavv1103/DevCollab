@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/hrpilot
+    username: hrpilot
+    password: hrpilot
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+  redis:
+    host: localhost
+    port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+
+langchain4j:
+  open-ai:
+    api-key: ${OPENAI_API_KEY}
+    model-name: gpt-4o-mini
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
