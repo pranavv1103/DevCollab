@@ -1,0 +1,53 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    defer-datasource-initialization: false
+    show-sql: false
+  sql:
+    init:
+      mode: never
+  kafka:
+    bootstrap-servers: localhost:9999
+    consumer:
+      group-id: test-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.hrpilot.event"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    admin:
+      fail-fast: false
+  redis:
+    host: localhost
+    port: 6380   # non-existent port; tests mock Redis
+
+app:
+  jwt:
+    secret: test-jwt-secret-key-must-be-at-least-32-chars-long
+    expiration: 86400000
+  uploads:
+    directory: /tmp/hrpilot-test-uploads
+
+langchain4j:
+  open-ai:
+    api-key: sk-test-placeholder
+
+grpc:
+  server:
+    port: 0   # random port for tests
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
