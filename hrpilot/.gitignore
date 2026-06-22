@@ -1,0 +1,11 @@
+.env
+/frontend/.env
+/.mvn/
+/backend/target/
+/backend/uploads/
+/frontend/node_modules/
+/frontend/dist/
+/.idea/
+/.vscode/*.code-workspace
+/.DS_Store
+*.log

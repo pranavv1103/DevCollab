@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package com.hrpilot.grpc;
+
+option java_package = "com.hrpilot.grpc.proto";
+option java_outer_classname = "EmbeddingProto";
+option java_multiple_files = true;
+
+// gRPC service for generating text embeddings
+// Runs on port 9090 internally (not exposed to the internet)
+service EmbeddingService {
+    rpc GenerateEmbedding (EmbeddingRequest) returns (EmbeddingResponse);
+    rpc GenerateBatchEmbeddings (BatchEmbeddingRequest) returns (BatchEmbeddingResponse);
+}
+
+message EmbeddingRequest {
+    string text = 1;
+    string model = 2;  // e.g., "text-embedding-3-small"
+}
+
+message EmbeddingResponse {
+    repeated float embedding = 1;
+    int32 dimensions = 2;
+    string model = 3;
+}
+
+message BatchEmbeddingRequest {
+    repeated string texts = 1;
+    string model = 2;
+}
+
+message BatchEmbeddingResponse {
+    repeated EmbeddingResponse embeddings = 1;
+}

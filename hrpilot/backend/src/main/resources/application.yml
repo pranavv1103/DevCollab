@@ -1,0 +1,73 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/hrpilot
+    username: hrpilot
+    password: hrpilot
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+  sql:
+    init:
+      mode: always
+  redis:
+    host: localhost
+    port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: hrpilot-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.hrpilot.event"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    admin:
+      fail-fast: false
+  graphql:
+    graphiql:
+      enabled: true
+    path: /graphql
+
+langchain4j:
+  open-ai:
+    api-key: ${OPENAI_API_KEY:sk-placeholder}
+    chat-model:
+      model-name: gpt-4o-mini
+    embedding-model:
+      model-name: text-embedding-3-small
+
+app:
+  jwt:
+    secret: hrpilot-jwt-secret-key-must-be-at-least-32-chars-long
+    expiration: 86400000
+  uploads:
+    directory: uploads
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:185075856780-0g382jjsjn7acali8uhh9gkm1b3uqdjc.apps.googleusercontent.com}
+
+grpc:
+  server:
+    port: 9090
+
+management:
+  health:
+    redis:
+      enabled: false
+    kafka:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,35 @@
+type Query {
+    chatSessions(userId: ID!): [ChatSession!]!
+    chatMessages(sessionId: ID!): [ChatMessage!]!
+    policyDocuments(companyId: ID!): [PolicyDocument!]!
+    policyDocument(id: ID!): PolicyDocument
+    searchDocuments(companyId: ID!, query: String!): [PolicyDocument!]!
+}
+
+type ChatSession {
+    id: ID!
+    userId: ID!
+    companyId: ID!
+    createdAt: String!
+    messages: [ChatMessage!]!
+}
+
+type ChatMessage {
+    id: ID!
+    sessionId: ID!
+    role: String!
+    content: String!
+    sources: String
+    createdAt: String!
+    cacheHit: Boolean!
+}
+
+type PolicyDocument {
+    id: ID!
+    fileName: String!
+    originalName: String!
+    companyId: ID!
+    status: String!
+    uploadedAt: String!
+    chunkCount: Int!
+}
